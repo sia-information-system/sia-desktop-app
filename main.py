@@ -1,5 +1,6 @@
 import tkinter as tk
-from tkinter import ttk
+import ttkbootstrap as ttk
+from ttkbootstrap.constants import *
 from tkinter import messagebox
 from PIL import ImageTk, Image
 
@@ -10,7 +11,7 @@ def sign_in_data_source(data_source, username, password, accept_terms):
     print("accept_terms:", accept_terms)
 
     # Validate data.
-    if data_source == '' or username == '' or password == '':
+    if data_source == "" or username == "" or password == "":
         tk.messagebox.showerror(title="Error", message="Todos los campos son obligatorios.")
         return
     if data_source not in DATA_SOURCES:
@@ -33,7 +34,7 @@ def load_download_data_frame():
 
     data_source_label = ttk.Label(form_frame, text="Selecciona la fuente de datos.")
     data_source_label.pack(fill="both", expand=1, pady=(10, 0))
-    data_source_entry = ttk.Combobox(form_frame, values=DATA_SOURCES)
+    data_source_entry = ttk.Combobox(form_frame, values=DATA_SOURCES, state="readonly")
     data_source_entry.pack(fill="both", expand=1, pady=(10, 0))
 
     username_label = ttk.Label(form_frame, text="Nombre de usuario:")
@@ -49,7 +50,7 @@ def load_download_data_frame():
     global terms_status_var # Required variable as global. Local variable does not work.
     terms_status_var = tk.BooleanVar()
     terms_status_var.set(False)
-    terms_check = ttk.Checkbutton(form_frame, text='Acepto los términos y condiciones', 
+    terms_check = ttk.Checkbutton(form_frame, text="Acepto los términos y condiciones", 
         variable=terms_status_var)
     terms_check.pack(fill="both", expand=1, pady=(10, 0))
 
@@ -100,15 +101,13 @@ def clear_frames():
 
 #  ------------------ Main ------------------
 
-DATA_SOURCES = ['Copernicus', 'NOAA']
+DATA_SOURCES = ["Copernicus", "NOAA"]
 
-root = tk.Tk()
-root.title('Caribbean Sea Data Repository')
-root.geometry('600x400')
-s = ttk.Style()
+root = ttk.Window(themename="cosmo")
+root.title("Caribbean Sea Data Repository")
+root.geometry("600x400")
 
 # Home frame.
-# s.configure('TFrame', background='#232323', foreground='white') # Set default style for all Frames.
 home_frame = ttk.Frame(root)
 home_frame.pack(fill="both", expand=1)
 logo_img = ImageTk.PhotoImage(Image.open("images/unicaribe_logo.png"))
@@ -119,12 +118,9 @@ name_app_label.pack(pady=20)
 
 # Create main frames ("windows") for each option in the menu bar.
 download_data_frame = ttk.Frame(root)
-s.configure('Frame2.TFrame', background='red')
-visualizations_frame = ttk.Frame(root, style='Frame2.TFrame')
-s.configure('Frame3.TFrame', background='orange')
-downloaded_data_frame = ttk.Frame(root, style='Frame3.TFrame')
-s.configure('Frame4.TFrame', background='green')
-saved_charts_frame = ttk.Frame(root, style='Frame4.TFrame')
+visualizations_frame = ttk.Frame(root)
+downloaded_data_frame = ttk.Frame(root)
+saved_charts_frame = ttk.Frame(root)
 
 # Menu bar.
 menu_bar = tk.Menu(root)
