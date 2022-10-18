@@ -4,6 +4,24 @@ from ttkbootstrap.constants import *
 from tkinter import messagebox
 from PIL import ImageTk, Image
 
+def place_and_center_app(app_width, app_height):
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    # Top left corner (tlc) position.
+    tlc_x = int( (screen_width / 2) - (app_width / 2) )
+    tlc_y = int( (screen_height / 2) - (app_height / 2) )
+    root.geometry(f"{app_width}x{app_height}+{tlc_x}+{tlc_y}")
+
+def load_home_frame():
+    home_frame.pack(fill="both", expand=1)
+
+    global logo_img # Avoid garbage collector to destroy the image.
+    logo_img = ImageTk.PhotoImage(Image.open("images/unicaribe_logo.png"))
+    logo_label = ttk.Label(home_frame, image = logo_img)
+    logo_label.pack(pady=(80, 0))
+    name_app_label = ttk.Label(home_frame, text="Caribbean Sea Data Repository", font=("Helvetica", 16))
+    name_app_label.pack(pady=20)
+
 def sign_in_data_source(data_source, username, password, accept_terms):
     print("data_source:", data_source)
     print("username:", username)
@@ -47,7 +65,7 @@ def load_download_data_frame():
     password_entry = ttk.Entry(form_frame, show="*")
     password_entry.pack(fill="both", expand=1, pady=(10, 0))
 
-    global terms_status_var # Required variable as global. Local variable does not work.
+    global terms_status_var # Avoid garbage collector deletes the reference to the variable.
     terms_status_var = tk.BooleanVar()
     terms_status_var.set(False)
     terms_check = ttk.Checkbutton(form_frame, text="Acepto los términos y condiciones", 
@@ -82,6 +100,28 @@ def load_saved_charts_frame():
     label = ttk.Label(saved_charts_frame, text="Herramienta para visualizar datos")
     label.pack(pady=80)
 
+def create_menu_bar():
+    root.config(menu=menu_bar)
+
+    # Create "Archivo" menu option.
+    file_menu = tk.Menu(menu_bar, tearoff=False)
+    menu_bar.add_cascade(label="Archivo", menu=file_menu)
+    file_menu.add_command(label="Nuevo", command=lambda: print("Nuevo archivo"))
+    file_menu.add_separator()
+    file_menu.add_command(label="Salir", command=root.quit)
+
+    # Create "Herramientas" menu option.
+    tools_menu = tk.Menu(menu_bar, tearoff=False)
+    menu_bar.add_cascade(label="Herramientas", menu=tools_menu)
+    tools_menu.add_command(label="Descargar Datos", command=load_download_data_frame)
+    tools_menu.add_command(label="Visualizaciones", command=load_visualizations_frame)
+
+    # Create "Historial" menu option.
+    history_menu = tk.Menu(menu_bar, tearoff=False)
+    menu_bar.add_cascade(label="Historial", menu=history_menu)
+    history_menu.add_command(label="Datos descargados", command=load_downloaded_data_frame)
+    history_menu.add_command(label="Visualizaciones guardadas", command=load_saved_charts_frame)
+
 def clear_frame(frame):
     # Destroy all widgets from frame, including inner frames.
     for widget in frame.winfo_children():
@@ -92,7 +132,6 @@ def clear_frame(frame):
 
 # Clear all main frames that works as "window" for each option in the menu bar.
 def clear_frames():
-    # TODO: Search how to get all the frames inserted in the root to for loop them
     clear_frame(home_frame)
     clear_frame(download_data_frame)
     clear_frame(visualizations_frame)
@@ -107,23 +146,11 @@ root = ttk.Window(themename="cosmo")
 root.title("Caribbean Sea Data Repository")
 
 # App placed in center of screen.
-app_width = 600
-app_height = 400
-screen_width = root.winfo_screenwidth()
-screen_height = root.winfo_screenheight()
-# Top left corner (tlc) position.
-tlc_x = int( (screen_width / 2) - (app_width / 2) )
-tlc_y = int( (screen_height / 2) - (app_height / 2) )
-root.geometry(f"{app_width}x{app_height}+{tlc_x}+{tlc_y}")
+place_and_center_app(600, 400)
 
 # Home frame.
 home_frame = ttk.Frame(root)
-home_frame.pack(fill="both", expand=1)
-logo_img = ImageTk.PhotoImage(Image.open("images/unicaribe_logo.png"))
-logo_label = ttk.Label(home_frame, image = logo_img)
-logo_label.pack(pady=(80, 0))
-name_app_label = ttk.Label(home_frame, text="Caribbean Sea Data Repository", font=("Helvetica", 16))
-name_app_label.pack(pady=20)
+load_home_frame()
 
 # Create main frames ("windows") for each option in the menu bar.
 download_data_frame = ttk.Frame(root)
@@ -133,25 +160,6 @@ saved_charts_frame = ttk.Frame(root)
 
 # Menu bar.
 menu_bar = tk.Menu(root)
-root.config(menu=menu_bar)
-
-# Create "Archivo" menu option.
-file_menu = tk.Menu(menu_bar, tearoff=False)
-menu_bar.add_cascade(label="Archivo", menu=file_menu)
-file_menu.add_command(label="Nuevo", command=lambda: print("Nuevo archivo"))
-file_menu.add_separator()
-file_menu.add_command(label="Salir", command=root.quit)
-
-# Create "Herramientas" menu option.
-tools_menu = tk.Menu(menu_bar, tearoff=False)
-menu_bar.add_cascade(label="Herramientas", menu=tools_menu)
-tools_menu.add_command(label="Descargar Datos", command=load_download_data_frame)
-tools_menu.add_command(label="Visualizaciones", command=load_visualizations_frame)
-
-# Create "Historial" menu option.
-history_menu = tk.Menu(menu_bar, tearoff=False)
-menu_bar.add_cascade(label="Historial", menu=history_menu)
-history_menu.add_command(label="Datos descargados", command=load_downloaded_data_frame)
-history_menu.add_command(label="Visualizaciones guardadas", command=load_saved_charts_frame)
+create_menu_bar()
 
 root.mainloop()
