@@ -105,7 +105,16 @@ DATA_SOURCES = ["Copernicus", "NOAA"]
 
 root = ttk.Window(themename="cosmo")
 root.title("Caribbean Sea Data Repository")
-root.geometry("600x400")
+
+# App placed in center of screen.
+app_width = 600
+app_height = 400
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
+# Top left corner (tlc) position.
+tlc_x = int( (screen_width / 2) - (app_width / 2) )
+tlc_y = int( (screen_height / 2) - (app_height / 2) )
+root.geometry(f"{app_width}x{app_height}+{tlc_x}+{tlc_y}")
 
 # Home frame.
 home_frame = ttk.Frame(root)
