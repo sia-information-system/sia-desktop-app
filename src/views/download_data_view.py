@@ -1,6 +1,5 @@
 import tkinter as tk
 import ttkbootstrap as ttk
-from ttkbootstrap.constants import *
 from tkinter import messagebox
 
 class DownloadDataView(ttk.Frame):
@@ -10,11 +9,6 @@ class DownloadDataView(ttk.Frame):
     self.terms_status_var = tk.BooleanVar()
 
   def sign_in_data_source(self, data_source, username, password, accept_terms):
-    print('data_source:', data_source)
-    print('username:', username)
-    print('password:', password)
-    print('accept_terms:', accept_terms)
-
     # Validate data.
     if data_source == '' or username == '' or password == '':
       tk.messagebox.showerror(title='Error', message='Todos los campos son obligatorios.')

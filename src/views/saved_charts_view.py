@@ -1,5 +1,4 @@
 import ttkbootstrap as ttk
-from ttkbootstrap.constants import *
 
 class SavedChartsView(ttk.Frame):
   def __init__(self, master):

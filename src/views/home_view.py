@@ -1,6 +1,7 @@
 import ttkbootstrap as ttk
-from ttkbootstrap.constants import *
+import pathlib
 from PIL import ImageTk, Image
+from utils.global_constants import ASSETS_DIR
 
 class HomeView(ttk.Frame):
   def __init__(self, master, title_app):
@@ -10,8 +11,8 @@ class HomeView(ttk.Frame):
 
   def load_view(self):
     self.pack(fill='both', expand=1)
-
-    self.logo_img = ImageTk.PhotoImage(Image.open('src/assets/images/unicaribe_logo.png'))
+    image_path = pathlib.Path(ASSETS_DIR, 'images', 'unicaribe_logo.png')
+    self.logo_img = ImageTk.PhotoImage(Image.open(image_path))
     logo_label = ttk.Label(self, image = self.logo_img)
     logo_label.pack(pady=(80, 0))
     name_app_label = ttk.Label(self, text=self.title_app, font=('Helvetica', 14))

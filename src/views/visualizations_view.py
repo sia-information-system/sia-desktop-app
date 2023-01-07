@@ -1,5 +1,5 @@
 import ttkbootstrap as ttk
-from ttkbootstrap.constants import *
+from utils.global_constants import VISUALIZATIONS_DIR
 
 class VisualizationsView(ttk.Frame):
   def __init__(self, master):

@@ -1,6 +1,5 @@
 import tkinter as tk
 import ttkbootstrap as ttk
-from ttkbootstrap.constants import *
 from views.home_view import HomeView
 from views.download_data_view import DownloadDataView
 from views.visualizations_view import VisualizationsView
