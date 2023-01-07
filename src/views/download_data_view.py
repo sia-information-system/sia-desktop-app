@@ -3,7 +3,7 @@ import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from tkinter import messagebox
 
-class DownloadDataFrame(ttk.Frame):
+class DownloadDataView(ttk.Frame):
   def __init__(self, master):
     super().__init__(master)
     self.data_sources = ['Copernicus', 'NOAA']
@@ -30,7 +30,7 @@ class DownloadDataFrame(ttk.Frame):
     # TODO: Sign in to data source.
     tk.messagebox.showinfo(title='Información', message='Conexión exitosa.')
 
-  def load_frame(self):
+  def load_view(self):
     self.pack(fill='both', expand=1)
 
     form_frame = ttk.Frame(self)

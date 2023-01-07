@@ -1,11 +1,11 @@
 import tkinter as tk
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-from home_frame import HomeFrame
-from download_data_frame import DownloadDataFrame
-from visualizations_frame import VisualizationsFrame
-from downloaded_data_frame import DownloadedDataFrame
-from saved_charts_frame import SavedChartsFrame
+from views.home_view import HomeView
+from views.download_data_view import DownloadDataView
+from views.visualizations_view import VisualizationsView
+from views.downloaded_data_view import DownloadedDataView
+from views.saved_charts_view import SavedChartsView
 
 class App:
   def __init__(self, window):
@@ -16,19 +16,19 @@ class App:
     # App placed in center of screen.
     self.place_and_center_app(800, 500)
 
-    # Create home frame.
-    self.home_frame = HomeFrame(self.window, self.title_app)
-    # Create main frames ('windows') for each option in the menu bar.
-    self.download_data_frame = DownloadDataFrame(self.window)
-    self.visualizations_frame = VisualizationsFrame(self.window)
-    self.downloaded_data_frame = DownloadedDataFrame(self.window)
-    self.saved_charts_frame = SavedChartsFrame(self.window)
+    # Create home view.
+    self.home_view = HomeView(self.window, self.title_app)
+    # Create main views ('windows') for each option in the menu bar.
+    self.download_data_view = DownloadDataView(self.window)
+    self.visualizations_view = VisualizationsView(self.window)
+    self.downloaded_data_view = DownloadedDataView(self.window)
+    self.saved_charts_view = SavedChartsView(self.window)
 
     # Menu bar.
     self.menu_bar = tk.Menu(self.window)
     self.create_menu_bar()
 
-    self.load_frame(self.home_frame)
+    self.load_view(self.home_view)
 
   def place_and_center_app(self, app_width, app_height):
     screen_width = self.window.winfo_screenwidth()
@@ -38,9 +38,9 @@ class App:
     tlc_y = int( (screen_height / 2) - (app_height / 2) )
     self.window.geometry(f'{app_width}x{app_height}+{tlc_x}+{tlc_y}')
 
-  def load_frame(self, frame):
-    self.clear_frames()
-    frame.load_frame()
+  def load_view(self, view):
+    self.clear_views()
+    view.load_view()
 
   def create_menu_bar(self):
     self.window.config(menu=self.menu_bar)
@@ -55,30 +55,30 @@ class App:
     # Create 'Herramientas' menu option.
     tools_menu = tk.Menu(self.menu_bar, tearoff=False)
     self.menu_bar.add_cascade(label='Herramientas', menu=tools_menu)
-    tools_menu.add_command(label='Descargar Datos', command=lambda: self.load_frame(self.download_data_frame))
-    tools_menu.add_command(label='Visualizaciones', command=lambda: self.load_frame(self.visualizations_frame))
+    tools_menu.add_command(label='Descargar Datos', command=lambda: self.load_view(self.download_data_view))
+    tools_menu.add_command(label='Visualizaciones', command=lambda: self.load_view(self.visualizations_view))
 
     # Create 'Historial' menu option.
     history_menu = tk.Menu(self.menu_bar, tearoff=False)
     self.menu_bar.add_cascade(label='Historial', menu=history_menu)
-    history_menu.add_command(label='Datos descargados', command=lambda: self.load_frame(self.downloaded_data_frame))
-    history_menu.add_command(label='Visualizaciones guardadas', command=lambda: self.load_frame(self.saved_charts_frame))
+    history_menu.add_command(label='Datos descargados', command=lambda: self.load_view(self.downloaded_data_view))
+    history_menu.add_command(label='Visualizaciones guardadas', command=lambda: self.load_view(self.saved_charts_view))
 
-  def clear_frame(self, frame):
-    # Destroy all widgets from frame, including inner frames.
-    for widget in frame.winfo_children():
+  def clear_view(self, view):
+    # Destroy all widgets from view (frame), including inner widgets.
+    for widget in view.winfo_children():
       widget.destroy()
 
-    # Clear frame (do not destroy the frame itself, just hide it).
-    frame.pack_forget()
+    # Clear view, do not destroy the view (frame) itself just hide it.
+    view.pack_forget()
 
-  # Clear all main frames that works as 'window' for each option in the menu bar.
-  def clear_frames(self):
-    self.clear_frame(self.home_frame)
-    self.clear_frame(self.download_data_frame)
-    self.clear_frame(self.visualizations_frame)
-    self.clear_frame(self.downloaded_data_frame)
-    self.clear_frame(self.saved_charts_frame)
+  # Clear all main views that works as 'window' for each option in the menu bar.
+  def clear_views(self):
+    self.clear_view(self.home_view)
+    self.clear_view(self.download_data_view)
+    self.clear_view(self.visualizations_view)
+    self.clear_view(self.downloaded_data_view)
+    self.clear_view(self.saved_charts_view)
 
 #  ------------------ Main ------------------
 
