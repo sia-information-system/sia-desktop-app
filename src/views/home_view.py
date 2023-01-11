@@ -15,5 +15,5 @@ class HomeView(ttk.Frame):
     self.logo_img = ImageTk.PhotoImage(Image.open(image_path))
     logo_label = ttk.Label(self, image = self.logo_img)
     logo_label.pack(pady=(80, 0))
-    name_app_label = ttk.Label(self, text=self.title_app, font=('Helvetica', 14))
-    name_app_label.pack(pady=20)
+    name_app_label = ttk.Label(self, text=self.title_app, font=('Helvetica', 18))
+    name_app_label.pack(pady=30)

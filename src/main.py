@@ -1,27 +1,35 @@
 import tkinter as tk
 import ttkbootstrap as ttk
-from views.home_view import HomeView
-from views.download_data_view import DownloadDataView
-from views.visualizations_view import VisualizationsView
-from views.downloaded_data_view import DownloadedDataView
-from views.saved_charts_view import SavedChartsView
+from views import (home_view, 
+  download_data_view, 
+  downloaded_data_view, 
+  saved_charts_view)
+from views.charts import (heatmap_view, 
+  contour_map_view, 
+  vertical_slice_view, 
+  single_point_time_series_view, 
+  single_point_vertical_profile_view)
 
 class App:
   def __init__(self, window):
     self.window = window
-    self.title_app = 'Sistema de información geográfica para la extracción y análisis de datos oceanográficos'
+    self.title_app = 'Sistema de información para la gestión y visualización de datos oceanográficos'
     self.window.title(self.title_app)
 
     # App placed in center of screen.
-    self.place_and_center_app(800, 500)
+    self.place_and_center_app(1024, 768)
 
     # Create home view.
-    self.home_view = HomeView(self.window, self.title_app)
+    self.home_view = home_view.HomeView(self.window, self.title_app)
     # Create main views ('windows') for each option in the menu bar.
-    self.download_data_view = DownloadDataView(self.window)
-    self.visualizations_view = VisualizationsView(self.window)
-    self.downloaded_data_view = DownloadedDataView(self.window)
-    self.saved_charts_view = SavedChartsView(self.window)
+    self.download_data_view = download_data_view.DownloadDataView(self.window)
+    self.downloaded_data_view = downloaded_data_view.DownloadedDataView(self.window)
+    self.saved_charts_view = saved_charts_view.SavedChartsView(self.window)
+    self.heatmap_view = heatmap_view.HeatMapView(self.window)
+    self.contour_map_view = contour_map_view.ContourMapView(self.window)
+    self.vertical_slice_view = vertical_slice_view.VerticalSliceView(self.window)
+    self.single_point_time_series_view = single_point_time_series_view.SinglePointTimeSeriesView(self.window)
+    self.single_point_vertical_profile_view = single_point_vertical_profile_view.SinglePointVerticalProfileView(self.window)
 
     # Menu bar.
     self.menu_bar = tk.Menu(self.window)
@@ -55,7 +63,15 @@ class App:
     tools_menu = tk.Menu(self.menu_bar, tearoff=False)
     self.menu_bar.add_cascade(label='Herramientas', menu=tools_menu)
     tools_menu.add_command(label='Descargar Datos', command=lambda: self.load_view(self.download_data_view))
-    tools_menu.add_command(label='Visualizaciones', command=lambda: self.load_view(self.visualizations_view))
+    # Submenu: 'Visualizaciones'.
+    visualizations_menu = tk.Menu(tools_menu, tearoff=False)
+    tools_menu.add_cascade(label='Visualizaciones', menu=visualizations_menu)
+    visualizations_menu.add_command(label='Heat map', command=lambda: self.load_view(self.heatmap_view))
+    visualizations_menu.add_command(label='Contour map', command=lambda: self.load_view(self.contour_map_view))
+    visualizations_menu.add_command(label='Vertical slice', command=lambda: self.load_view(self.vertical_slice_view))
+    visualizations_menu.add_separator()
+    visualizations_menu.add_command(label='Single point time series', command=lambda: self.load_view(self.single_point_time_series_view))
+    visualizations_menu.add_command(label='Single point vertical profile', command=lambda: self.load_view(self.single_point_vertical_profile_view))
 
     # Create 'Historial' menu option.
     history_menu = tk.Menu(self.menu_bar, tearoff=False)
@@ -64,20 +80,21 @@ class App:
     history_menu.add_command(label='Visualizaciones guardadas', command=lambda: self.load_view(self.saved_charts_view))
 
   def clear_view(self, view):
+    # print(f'view: {view}. type: {type(view)}')
     # Destroy all widgets from view (frame), including inner widgets.
     for widget in view.winfo_children():
+      # print(f'widget: {widget}. type: {type(widget)}')
       widget.destroy()
 
     # Clear view, do not destroy the view (frame) itself just hide it.
     view.pack_forget()
 
-  # Clear all main views that works as 'window' for each option in the menu bar.
+  # Clear all main views (frames) that works as 'window' for each option in the menu bar.
   def clear_views(self):
-    self.clear_view(self.home_view)
-    self.clear_view(self.download_data_view)
-    self.clear_view(self.visualizations_view)
-    self.clear_view(self.downloaded_data_view)
-    self.clear_view(self.saved_charts_view)
+    # print('--------------------')
+    for view in self.window.winfo_children():
+      if isinstance(view, ttk.Frame):
+        self.clear_view(view)
 
 #  ------------------ Main ------------------
 
