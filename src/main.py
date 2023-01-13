@@ -83,7 +83,7 @@ class App:
     # print(f'view: {view}. type: {type(view)}')
     # Destroy all widgets from view (frame), including inner widgets.
     for widget in view.winfo_children():
-      # print(f'widget: {widget}. type: {type(widget)}')
+      # print(f'\twidget: {widget}. type: {type(widget)}')
       widget.destroy()
 
     # Clear view, do not destroy the view (frame) itself just hide it.
