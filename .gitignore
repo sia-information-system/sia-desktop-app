@@ -1,1 +1,8 @@
+# Cache
 *__pycache__
+
+# Configuration files
+etc/config.ini
+
+# Dowloads
+downloads/
