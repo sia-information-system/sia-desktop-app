@@ -1,8 +1,9 @@
+# NOTE: Temporary view. Reused dowload_data_view.py. This was updated in mockups.
 import tkinter as tk
 import ttkbootstrap as ttk
 from tkinter import messagebox
 
-class DownloadDataView(ttk.Frame):
+class DataExtractorView(ttk.Frame):
   def __init__(self, master):
     super().__init__(master)
     self.data_sources = ['Copernicus', 'NOAA']

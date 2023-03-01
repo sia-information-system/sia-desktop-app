@@ -4,5 +4,8 @@
 # Configuration files
 etc/config.ini
 
-# Dowloads
-downloads/
+# Dowloaded datasets.
+datasets/
+
+# User projects.
+projects/

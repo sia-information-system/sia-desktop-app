@@ -8,4 +8,11 @@
 
 ## How to run app
 
-The entry point to the application is `src/main.py`, so to run the application, make sure you run the previous file with python.
+**NOTE:** You need to first create and fill the `etc/config.ini` file before running the the app. 
+See the template `etc/config.ini.example`.
+
+Once done, at the project root directory, run the following command to start the application:
+
+``` sh
+python src/main.py
+```
