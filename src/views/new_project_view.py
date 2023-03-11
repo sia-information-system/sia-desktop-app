@@ -2,9 +2,9 @@ import tkinter as tk
 import ttkbootstrap as ttk
 from tkinter.filedialog import askopenfilename
 import utils.global_variables as global_vars
-from utils.global_constants import DATASETS_DIR
+import utils.project_manager as prj_mgmt
+from utils.global_constants import HOME_DATASETS_DIR
 from utils.general_utils import find_view, change_view
-from utils.project_manager import save_project, project_exists
 from views.workspace_view import WorkspaceView
 from views.data_extractor_view import DataExtractorView
 
@@ -117,7 +117,7 @@ class NewProjectView(ttk.Frame):
     '''Callback for directory browse'''
     self.__dataset_path = askopenfilename(
       title='Seleccione el conjunto de datos',
-      initialdir=DATASETS_DIR
+      initialdir=HOME_DATASETS_DIR
     )
     if self.__dataset_path:
       self.__selected_dataset_label_var.set('Archivo seleccionado.')
@@ -134,7 +134,12 @@ class NewProjectView(ttk.Frame):
 
     # Create project (zip).
     dataset = selected_dataset if get_data_option == 'select_dataset' else None
-    global_vars.current_project_path = save_project(project_name, dataset)
+    global_vars.current_project_path = prj_mgmt.save_project(project_name, dataset)
+    # Set current project dataset.
+    if dataset:
+      global_vars.current_project_dataset = prj_mgmt.get_dataset_project(global_vars.current_project_path)
+    else:
+      global_vars.current_project_dataset = None
 
     # Redirect to the next view.
     if get_data_option == 'select_dataset':
@@ -149,7 +154,7 @@ class NewProjectView(ttk.Frame):
       tk.messagebox.showerror(title='Error', message='Por favor escribe el nombre del proyecto.')
       return False
 
-    if project_exists(project_name):
+    if prj_mgmt.project_exists(project_name):
       tk.messagebox.showerror(title='Error', message='Ya existe un proyecto con ese nombre.')
       return False
 

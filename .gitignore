@@ -4,8 +4,4 @@
 # Configuration files
 etc/config.ini
 
-# Dowloaded datasets.
-datasets/
-
-# User projects.
-projects/
+tmp/

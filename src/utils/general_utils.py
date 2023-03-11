@@ -19,9 +19,15 @@ def read_config():
 def mkdir_r(path):
   os.makedirs(path, exist_ok=True)
 
-def get_directory_from_config(config_var):
-  # Initial segments move to root directory.
-  path_segments = [pathlib.Path(__file__).parent.absolute(), '..', '..']
+def get_directory_from_config(config_var, start_from='root'):
+  path_segments = []
+  # Initial segments 
+  if start_from == 'root':
+    path_segments.extend([pathlib.Path(__file__).parent.absolute(), '..', '..'])
+  elif start_from == 'user_home':
+    home_dirname='OISYS'
+    path_segments.extend([pathlib.Path.home(), home_dirname])
+
   try:
     config = read_config()
     user_path = config['DEFAULT'][config_var]
