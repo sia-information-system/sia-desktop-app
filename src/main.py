@@ -1,5 +1,6 @@
 import tkinter as tk
 import ttkbootstrap as ttk
+from tkinter.filedialog import askdirectory
 from views.home_view import HomeView
 from views.new_project_view import NewProjectView
 from views.workspace_view import WorkspaceView
@@ -7,6 +8,9 @@ from views.dataset_info_view import DatasetInfoView
 from views.data_extractor_view import DataExtractorView
 from views.user_manual_view import UserManualView
 from utils.general_utils import change_view
+from utils.global_constants import HOME_PROJECTS_DIR
+import utils.global_variables as global_vars
+import utils.project_manager as prj_mgmt
 
 class App:
   def __init__(self, window):
@@ -47,7 +51,7 @@ class App:
     file_menu = tk.Menu(self.__menu_bar, tearoff=False)
     self.__menu_bar.add_cascade(label='Archivo', menu=file_menu)
     file_menu.add_command(label='Nuevo Proyecto', command=lambda: change_view(self.window, self.new_project_view))
-    file_menu.add_command(label='Abrir Proyecto', command=lambda: print('Abrir Proyecto'))
+    file_menu.add_command(label='Abrir Proyecto', command=self.__open_project)
     file_menu.add_command(label='Guardar', command=lambda: print('Guardar'))
     file_menu.add_command(label='Cambiar fuente de datos', command=lambda: print('Cambiar fuente de datos'))
     file_menu.add_separator()
@@ -68,6 +72,17 @@ class App:
     # Create 'Manual de usuario' menu option.
     user_manual_menu = tk.Menu(self.__menu_bar, tearoff=False)
     self.__menu_bar.add_command(label='Manual de usuario', command=lambda: change_view(self.window, self.user_manual_view))
+
+  def __open_project(self):
+    print('Open project')
+    project_path = askdirectory(
+      title='Selecciona el directorio del proyecto',
+      initialdir=HOME_PROJECTS_DIR
+    )
+    print(f'Project path: {project_path}')
+    global_vars.current_project_path = project_path
+    global_vars.current_project_dataset = prj_mgmt.get_dataset_project(project_path)
+    change_view(self.window, self.workspace_view)
 
 #  ------------------ Main ------------------
 

@@ -25,19 +25,19 @@ def save_project(project_name, dataset_path=None):
         project_dataset_file.write(dataset_file.read())
 
   # Project description that will be saved as json file.
-  data = {}
-  data['project'] = { 'name': project_name }
-  data['dataset'] = { 
+  metadata = {}
+  metadata['project'] = { 'name': project_name }
+  metadata['dataset'] = { 
     'originalPath': dataset_path,
     'fromProjectPath': f'dataset/{project_dataset_filename}' if user_chose_select_data else None
   }
-  data['worksheets'] = []
+  metadata['worksheets'] = []
 
-  # Save data json in project directory.
+  # Save metadata json in project directory.
   json_filename = f'{project_name}.json'
   json_path = pathlib.Path(project_dir, json_filename)
   with open(json_path, 'w') as json_file: 
-    json.dump(data, json_file, indent=2)
+    json.dump(metadata, json_file, indent=2)
 
   return project_dir
 
@@ -85,30 +85,63 @@ def get_project_name(project_path):
 
 # -------------------------------- Related to sheets ---------------------------------
 
-def add_sheet(project_path, sheet_name, sheet_chart):
-  metadata= None
+def get_worksheets(project_path):
+  # Find the project metadata (json file).
+  json_file_path = None
+  for filename in os.listdir(project_path):
+    if filename.endswith('.json'):
+      json_file_path = pathlib.Path(project_path, filename)
+      break
 
-  with zipfile.ZipFile(project_path, 'r') as zipf:
-    # Find the only json file (project metadat) in the zip file.
-    json_filename = None
-    for filename in zipf.namelist():
-      if filename.endswith('.json'):
-        json_filename = filename
-        break
+  with open(json_file_path) as json_file:
+    metadata = json.load(json_file)
+    return metadata['worksheets']
 
-    print(f'json_filename: {json_filename}')
+def worksheet_exists(project_path, sheet_name):
+  worksheets = get_worksheets(project_path)
+  sheet_name = sheet_name.strip().lower()
+  return sheet_name in [sheet['name'] for sheet in worksheets]
 
-    # Add a new worsheet (object) which has 2 keys: name and chart
-    with zipf.open(json_filename) as json_file:
-      metadata = json.load(json_file)
-      metadata['worksheets'].append({
-        'name': sheet_name,
-        'chart_type': sheet_chart,
-        'parameters': {}
-      })
-      print(f'New metadata: {metadata}')
+def add_worksheet(project_path, sheet_name, sheet_chart):
+  # Find the project metadata (json file).
+  json_file_path = None
+  for filename in os.listdir(project_path):
+    if filename.endswith('.json'):
+      json_file_path = pathlib.Path(project_path, filename)
+      break
 
-  # FIXME: Files are duplicated.
-  with zipfile.ZipFile(project_path, 'a') as zipf:
-    json_data = json.dumps(metadata, indent=2).encode('utf-8')
-    zipf.writestr(json_filename, json_data)
+  with open(json_file_path) as json_file:
+    metadata = json.load(json_file)
+
+  # Add new sheet to worksheets list.
+  sheet_data = {
+    'name': sheet_name.strip().lower(),
+    'chart': sheet_chart,
+    'parameters': {}
+  }
+  metadata['worksheets'].append(sheet_data)
+
+  # Save updated metadata json in project directory.
+  with open(json_file_path, 'w') as json_file:
+    json.dump(metadata, json_file, indent=2)
+
+def delete_worksheet(project_path, sheet_name):
+  # Find the project metadata (json file).
+  json_file_path = None
+  for filename in os.listdir(project_path):
+    if filename.endswith('.json'):
+      json_file_path = pathlib.Path(project_path, filename)
+      break
+
+  with open(json_file_path) as json_file:
+    metadata = json.load(json_file)
+
+  # Find and remove the sheet with the provided name from the worksheets list.
+  for sheet in metadata['worksheets']:
+    if sheet['name'] == sheet_name:
+      metadata['worksheets'].remove(sheet)
+      break
+
+  # Save updated metadata json in project directory.
+  with open(json_file_path, 'w') as json_file:
+    json.dump(metadata, json_file, indent=2)

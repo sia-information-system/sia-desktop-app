@@ -67,12 +67,23 @@ class NewSheetDialogBox(QueryDialog):
     This method is called automatically to validate the data before
     the dialog is destroyed. Can be subclassed and overridden.
     '''
-    # TODO: Validar que no exista el nombre de la hoja.
 
     if self._result == '':
       Messagebox.ok(
         message='Asegurese de ingresar un nombre para la hoja',
         title='Datos faltantes',
+        parent=self._toplevel
+      )
+      return False
+
+    worksheet_exists = prj_mgmt.worksheet_exists(
+      sheet_name=self._result, 
+      project_path=global_vars.current_project_path
+    )
+    if worksheet_exists:
+      Messagebox.ok(
+        message='Ya existe una hoja con ese nombre, ingrese otro.',
+        title='Datos duplicados',
         parent=self._toplevel
       )
       return False
@@ -132,20 +143,24 @@ class WorkspaceView(ttk.Frame):
     super().__init__(master)
 
     self.project_dataset = None
+    self.project_path = None
     self.notebook = None
 
   def load_view(self):
-    self.pack(fill='both', expand=1)
-    project_name = prj_mgmt.get_project_name(project_path=global_vars.current_project_path)
-    title = 'Proyecto: ' + string.capwords(project_name)
-    label = ttk.Label(self, text=title, font=('Helvetica', 14))
-    label.pack(pady=10)
+    self.pack(fill='both', expand=1) # Load view frame.
 
     # Load current dataset.
     self.project_dataset = global_vars.current_project_dataset
     print(f'Project_dataset: {self.project_dataset}')
+    # Load current project path.
+    self.project_path = global_vars.current_project_path
 
-    current_project_label = ttk.Label(self, text=f'Ruta de proyecto actual: {global_vars.current_project_path}')
+    project_name = prj_mgmt.get_project_name(project_path=self.project_path)
+    title = 'Proyecto: ' + string.capwords(project_name)
+    label = ttk.Label(self, text=title, font=('Helvetica', 14))
+    label.pack(pady=10)
+
+    current_project_label = ttk.Label(self, text=f'Ruta de proyecto actual: {self.project_path}')
     current_project_label.pack(pady=10)
 
     self.notebook = ttk.Notebook(self, bootstyle="secondary")
@@ -154,9 +169,11 @@ class WorkspaceView(ttk.Frame):
     # TODO: Revisar que si el proyecto no tiene hoja, obligar a crear una, siempre y cuando ya existe un proyecto cargado.
     main_sheet_tab = ttk.Frame(self.notebook)
     main_sheet_tab.pack(fill='both', expand=1)
-    label = ttk.Label(main_sheet_tab, text='Contenido dentro de la hoja. Nombre de la hoja: Hoja principal.')
+    label = ttk.Label(main_sheet_tab, text='Contenido dentro de la hoja. Nombre de la hoja: Hoja principal.', font=('Helvetica', 12))
     label.pack(pady=30)
     self.notebook.add(main_sheet_tab, text='Hoja principal')
+
+    self.__load_tabs_from_json(self.notebook, self.project_path)
 
     buttons_frame = ttk.Frame(self)
     buttons_frame.pack(pady=10)
@@ -183,22 +200,39 @@ class WorkspaceView(ttk.Frame):
     new_sheet_window.show()
     sheet_data = new_sheet_window.get_sheet_data()
     if sheet_data['proceed_to_add']:
+      # Add tab to notebook.
       self.__add_tab(sheet_data['name'])
-      # TODO: Añadir datos a archivo json.
-      prj_mgmt.add_sheet(global_vars.current_project_path, sheet_data['name'], sheet_data['chart_type'])
+      # Save worksheet to project.
+      prj_mgmt.add_worksheet(self.project_path, sheet_data['name'], sheet_data['chart_type'])
 
   def __add_tab(self, tab_name):
     frame_in_tab = ttk.Frame(self.notebook)
     frame_in_tab.pack(fill='both', expand=1)
 
-    label = ttk.Label(frame_in_tab, text='Contenido dentro de la hoja. Nombre de la hoja: ' + tab_name + '.')
+    label = ttk.Label(frame_in_tab, text='Contenido dentro de la hoja. Nombre de la hoja: ' + tab_name + '.', font=('Helvetica', 12))
     label.pack(pady=30)
     result_add = self.notebook.add(frame_in_tab, text=tab_name)
     new_tab_index = self.notebook.index('end') - 1
     self.notebook.select(new_tab_index)
 
   def __remove_current_tab(self):
-    current_tab = self.notebook.select()
-    print(f'current_tab: {current_tab}')
-    if current_tab:
-        self.notebook.forget(current_tab)
+    # TODO: Añadir ventana de confirmación.
+    tab_id = self.notebook.select()
+    print(f'tab_id: {tab_id}')
+
+    if not tab_id:
+      return
+
+    tab_info = self.notebook.tab(tab_id)
+    print(f'tab_info: {tab_info}')
+    # Delete tab from json file.
+    tab_name = tab_info['text']
+    prj_mgmt.delete_worksheet(self.project_path, tab_name)
+    # Delete tab from notebook.
+    self.notebook.forget(tab_id)
+
+  def __load_tabs_from_json(self, notebook, project_path):
+    worksheets = prj_mgmt.get_worksheets(project_path)
+    for worksheet in worksheets:
+      tab_name = worksheet['name']
+      self.__add_tab(tab_name)
