@@ -32,7 +32,7 @@ def save_project(project_name, dataset_path=None):
     'originalPath': dataset_path,
     'fromProjectPath': f'dataset/{project_dataset_filename}' if user_chose_select_data else None
   }
-  data['worksheets'] = {}
+  data['worksheets'] = []
 
 
   # Create zip file.
@@ -92,3 +92,48 @@ def get_dataset_project(project_path):
       os.rmdir(pathlib.Path(TMP_DIR, 'dataset'))
 
   return ds
+
+def get_project_name(project_path):
+  if not project_path:
+    return ''
+  
+  with zipfile.ZipFile(project_path, 'r') as zipf:
+    # Find the only json file (project metadat) in the zip file.
+    json_filename = None
+    for filename in zipf.namelist():
+      if filename.endswith('.json'):
+        json_filename = filename
+        break
+    with zipf.open(json_filename) as json_file:
+      metadata = json.load(json_file)
+      return metadata['project']['name']
+
+# -------------------------------- Related to sheets ---------------------------------
+
+def add_sheet(project_path, sheet_name, sheet_chart):
+  metadata= None
+
+  with zipfile.ZipFile(project_path, 'r') as zipf:
+    # Find the only json file (project metadat) in the zip file.
+    json_filename = None
+    for filename in zipf.namelist():
+      if filename.endswith('.json'):
+        json_filename = filename
+        break
+
+    print(f'json_filename: {json_filename}')
+
+    # Add a new worsheet (object) which has 2 keys: name and chart
+    with zipf.open(json_filename) as json_file:
+      metadata = json.load(json_file)
+      metadata['worksheets'].append({
+        'name': sheet_name,
+        'chart_type': sheet_chart,
+        'parameters': {}
+      })
+      print(f'New metadata: {metadata}')
+
+  # FIXME: Files are duplicated.
+  with zipfile.ZipFile(project_path, 'a') as zipf:
+    json_data = json.dumps(metadata, indent=2).encode('utf-8')
+    zipf.writestr(json_filename, json_data)

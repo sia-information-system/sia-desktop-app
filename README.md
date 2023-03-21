@@ -4,7 +4,8 @@
 
 * [Pillow](https://pypi.org/project/Pillow/). Command to install: `pip install Pillow`
 * [ttkbootstrap](https://pypi.org/project/ttkbootstrap/). Command to install: `pip install ttkbootstrap`
-
+* [xarray](https://pypi.org/project/xarray/). Command to install: `pip install xarray`
+* [netCDF4](https://pypi.org/project/netCDF4/). Command to install: `pip install netCDF4`
 
 ## How to run app
 
