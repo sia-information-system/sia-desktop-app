@@ -132,7 +132,7 @@ class NewProjectView(ttk.Frame):
     if not valid_fields:
       return
 
-    # Create project (zip).
+    # Create project.
     dataset = selected_dataset if get_data_option == 'select_dataset' else None
     global_vars.current_project_path = prj_mgmt.save_project(project_name, dataset)
     # Set current project dataset.
