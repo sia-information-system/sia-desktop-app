@@ -138,7 +138,7 @@ def delete_worksheet(project_path, sheet_name):
 
   # Find and remove the sheet with the provided name from the worksheets list.
   for sheet in metadata['worksheets']:
-    if sheet['name'] == sheet_name:
+    if sheet['name'] == sheet_name.strip().lower():
       metadata['worksheets'].remove(sheet)
       break
 
