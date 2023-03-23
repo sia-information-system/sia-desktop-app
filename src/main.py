@@ -1,6 +1,6 @@
 import tkinter as tk
 import ttkbootstrap as ttk
-from tkinter.filedialog import askdirectory
+from tkinter.filedialog import askdirectory, askopenfilename
 from views.home_view import HomeView
 from views.new_project_view import NewProjectView
 from views.workspace_view import WorkspaceView
@@ -11,6 +11,7 @@ from utils.general_utils import change_view
 from utils.global_constants import HOME_PROJECTS_DIR
 import utils.global_variables as global_vars
 import utils.project_manager as prj_mgmt
+import pathlib
 
 class App:
   def __init__(self, window):
@@ -74,12 +75,13 @@ class App:
     self.__menu_bar.add_command(label='Manual de usuario', command=lambda: change_view(self.window, self.user_manual_view))
 
   def __open_project(self):
-    print('Open project')
-    project_path = askdirectory(
-      title='Selecciona el directorio del proyecto',
-      initialdir=HOME_PROJECTS_DIR
+    project_metadata_file_path = askopenfilename(
+      title='Selecciona el proyecto',
+      initialdir=HOME_PROJECTS_DIR,
+      filetypes=[('sia files', '*.sia')]
     )
-    print(f'Project path: {project_path}')
+    project_path = pathlib.Path(project_metadata_file_path).parent.absolute()
+    print(f'Project path dir: {project_path}')
     global_vars.current_project_path = project_path
     global_vars.current_project_dataset = prj_mgmt.get_dataset_project(project_path)
     change_view(self.window, self.workspace_view)

@@ -1,8 +1,9 @@
 import ttkbootstrap as ttk
-import utils.global_variables as global_vars
-import textwrap
+from tkinter import messagebox
 from ttkbootstrap.dialogs.dialogs import QueryDialog, Messagebox
+import utils.global_variables as global_vars
 import utils.project_manager as prj_mgmt
+import textwrap
 import string
 
 # Docs for QueryDialog: https://ttkbootstrap.readthedocs.io/en/latest/api/dialogs/querydialog/
@@ -173,7 +174,8 @@ class WorkspaceView(ttk.Frame):
     label.pack(pady=30)
     self.notebook.add(main_sheet_tab, text='Hoja principal')
 
-    self.__load_tabs_from_json(self.notebook, self.project_path)
+    if self.project_path:
+      self.__load_tabs_from_json(self.notebook, self.project_path)
 
     buttons_frame = ttk.Frame(self)
     buttons_frame.pack(pady=10)
@@ -184,7 +186,8 @@ class WorkspaceView(ttk.Frame):
       buttons_frame, 
       text='Nueva hoja', 
       command=lambda: self.__show_new_sheet_dialog(new_sheet_window),
-      bootstyle='default'
+      bootstyle='default',
+      width=30
     )
     add_tab_button.pack(pady=10, padx=(0, 10), side='left')
 
@@ -192,7 +195,8 @@ class WorkspaceView(ttk.Frame):
       buttons_frame, 
       text='Eliminar hoja actual', 
       command=self.__remove_current_tab,
-      bootstyle='danger'
+      bootstyle='danger',
+      width=30
     )
     remove_tab_button.pack(pady=10, padx=(10, 0), side='left')
 
@@ -216,16 +220,16 @@ class WorkspaceView(ttk.Frame):
     self.notebook.select(new_tab_index)
 
   def __remove_current_tab(self):
-    # TODO: Añadir ventana de confirmación.
     tab_id = self.notebook.select()
-    print(f'tab_id: {tab_id}')
-
     if not tab_id:
       return
 
-    tab_info = self.notebook.tab(tab_id)
-    print(f'tab_info: {tab_info}')
+    confirm_delete = messagebox.askyesno('Confirmación', '¿Quiere continuar con la eliminación de la hoja actual?')
+    if not confirm_delete:
+      return
+
     # Delete tab from json file.
+    tab_info = self.notebook.tab(tab_id)
     tab_name = tab_info['text']
     prj_mgmt.delete_worksheet(self.project_path, tab_name)
     # Delete tab from notebook.

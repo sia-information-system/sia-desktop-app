@@ -4,6 +4,8 @@ import os
 from utils.global_constants import HOME_PROJECTS_DIR, TMP_DIR
 import xarray as xr
 
+PROJECT_EXTENSION = '.sia'
+
 def save_project(project_name, dataset_path=None):
   user_chose_select_data = dataset_path != None
 
@@ -34,7 +36,7 @@ def save_project(project_name, dataset_path=None):
   metadata['worksheets'] = []
 
   # Save metadata json in project directory.
-  json_filename = f'{project_name}.json'
+  json_filename = f'{project_name}{PROJECT_EXTENSION}'
   json_path = pathlib.Path(project_dir, json_filename)
   with open(json_path, 'w') as json_file: 
     json.dump(metadata, json_file, indent=2)
@@ -53,7 +55,7 @@ def get_dataset_project(project_path):
   # Find the project metadata (json file).
   json_file_path = None
   for filename in os.listdir(project_path):
-    if filename.endswith('.json'):
+    if filename.endswith(PROJECT_EXTENSION):
       json_file_path = pathlib.Path(project_path, filename)
       break
 
@@ -75,7 +77,7 @@ def get_project_name(project_path):
   # Find the project metadata (json file).
   json_file_path = None
   for filename in os.listdir(project_path):
-    if filename.endswith('.json'):
+    if filename.endswith(PROJECT_EXTENSION):
       json_file_path = pathlib.Path(project_path, filename)
       break
 
@@ -89,7 +91,7 @@ def get_worksheets(project_path):
   # Find the project metadata (json file).
   json_file_path = None
   for filename in os.listdir(project_path):
-    if filename.endswith('.json'):
+    if filename.endswith(PROJECT_EXTENSION):
       json_file_path = pathlib.Path(project_path, filename)
       break
 
@@ -106,7 +108,7 @@ def add_worksheet(project_path, sheet_name, sheet_chart):
   # Find the project metadata (json file).
   json_file_path = None
   for filename in os.listdir(project_path):
-    if filename.endswith('.json'):
+    if filename.endswith(PROJECT_EXTENSION):
       json_file_path = pathlib.Path(project_path, filename)
       break
 
@@ -129,7 +131,7 @@ def delete_worksheet(project_path, sheet_name):
   # Find the project metadata (json file).
   json_file_path = None
   for filename in os.listdir(project_path):
-    if filename.endswith('.json'):
+    if filename.endswith(PROJECT_EXTENSION):
       json_file_path = pathlib.Path(project_path, filename)
       break
 
