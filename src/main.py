@@ -8,7 +8,7 @@ from views.dataset_info_view import DatasetInfoView
 from views.data_extractor_view import DataExtractorView
 from views.user_manual_view import UserManualView
 from utils.general_utils import change_view
-from utils.global_constants import HOME_PROJECTS_DIR
+from utils.global_constants import HOME_PROJECTS_DIR, PROJECT_EXTENSION
 import utils.global_variables as global_vars
 import utils.project_manager as prj_mgmt
 import pathlib
@@ -78,7 +78,7 @@ class App:
     project_metadata_file_path = askopenfilename(
       title='Selecciona el proyecto',
       initialdir=HOME_PROJECTS_DIR,
-      filetypes=[('sia files', '*.sia')]
+      filetypes=[('sia files', f'*{PROJECT_EXTENSION}')]
     )
     project_path = pathlib.Path(project_metadata_file_path).parent.absolute()
     print(f'Project path dir: {project_path}')

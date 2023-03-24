@@ -1,10 +1,15 @@
 import json
 import pathlib
 import os
-from utils.global_constants import HOME_PROJECTS_DIR, TMP_DIR
+from utils.global_constants import HOME_PROJECTS_DIR, TMP_DIR, PROJECT_EXTENSION
 import xarray as xr
 
-PROJECT_EXTENSION = '.sia'
+def get_project_metadata_file_path(project_path):
+  for filename in os.listdir(project_path):
+    if filename.endswith(PROJECT_EXTENSION):
+      return pathlib.Path(project_path, filename)
+
+# ---------------------------------------------------------------------------------
 
 def save_project(project_name, dataset_path=None):
   user_chose_select_data = dataset_path != None
@@ -53,17 +58,10 @@ def project_exists(project_name):
 # Return dataset using path in project.json
 def get_dataset_project(project_path):
   # Find the project metadata (json file).
-  json_file_path = None
-  for filename in os.listdir(project_path):
-    if filename.endswith(PROJECT_EXTENSION):
-      json_file_path = pathlib.Path(project_path, filename)
-      break
-
+  project_metadata_path = get_project_metadata_file_path(project_path)
   ds = None
-  with open(json_file_path) as json_file:
+  with open(project_metadata_path) as json_file:
     metadata = json.load(json_file)
-    print(f'Project metadata: {metadata}')
-    
     project_dataset_path = metadata['dataset']['fromProjectPath']
     dataset_path = pathlib.Path(project_path, project_dataset_path)
     ds = xr.open_dataset(dataset_path, engine='netcdf4')
@@ -75,13 +73,8 @@ def get_project_name(project_path):
     return ''
 
   # Find the project metadata (json file).
-  json_file_path = None
-  for filename in os.listdir(project_path):
-    if filename.endswith(PROJECT_EXTENSION):
-      json_file_path = pathlib.Path(project_path, filename)
-      break
-
-  with open(json_file_path) as json_file:
+  project_metadata_path = get_project_metadata_file_path(project_path)
+  with open(project_metadata_path) as json_file:
     metadata = json.load(json_file)
     return metadata['project']['name']
 
@@ -89,13 +82,8 @@ def get_project_name(project_path):
 
 def get_worksheets(project_path):
   # Find the project metadata (json file).
-  json_file_path = None
-  for filename in os.listdir(project_path):
-    if filename.endswith(PROJECT_EXTENSION):
-      json_file_path = pathlib.Path(project_path, filename)
-      break
-
-  with open(json_file_path) as json_file:
+  project_metadata_path = get_project_metadata_file_path(project_path)
+  with open(project_metadata_path) as json_file:
     metadata = json.load(json_file)
     return metadata['worksheets']
 
@@ -106,13 +94,8 @@ def worksheet_exists(project_path, sheet_name):
 
 def add_worksheet(project_path, sheet_name, sheet_chart):
   # Find the project metadata (json file).
-  json_file_path = None
-  for filename in os.listdir(project_path):
-    if filename.endswith(PROJECT_EXTENSION):
-      json_file_path = pathlib.Path(project_path, filename)
-      break
-
-  with open(json_file_path) as json_file:
+  project_metadata_path = get_project_metadata_file_path(project_path)
+  with open(project_metadata_path) as json_file:
     metadata = json.load(json_file)
 
   # Add new sheet to worksheets list.
@@ -124,18 +107,13 @@ def add_worksheet(project_path, sheet_name, sheet_chart):
   metadata['worksheets'].append(sheet_data)
 
   # Save updated metadata json in project directory.
-  with open(json_file_path, 'w') as json_file:
+  with open(project_metadata_path, 'w') as json_file:
     json.dump(metadata, json_file, indent=2)
 
 def delete_worksheet(project_path, sheet_name):
   # Find the project metadata (json file).
-  json_file_path = None
-  for filename in os.listdir(project_path):
-    if filename.endswith(PROJECT_EXTENSION):
-      json_file_path = pathlib.Path(project_path, filename)
-      break
-
-  with open(json_file_path) as json_file:
+  project_metadata_path = get_project_metadata_file_path(project_path)
+  with open(project_metadata_path) as json_file:
     metadata = json.load(json_file)
 
   # Find and remove the sheet with the provided name from the worksheets list.
@@ -145,5 +123,5 @@ def delete_worksheet(project_path, sheet_name):
       break
 
   # Save updated metadata json in project directory.
-  with open(json_file_path, 'w') as json_file:
+  with open(project_metadata_path, 'w') as json_file:
     json.dump(metadata, json_file, indent=2)
