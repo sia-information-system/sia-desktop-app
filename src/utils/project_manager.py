@@ -1,8 +1,11 @@
 import json
 import pathlib
 import os
-from utils.global_constants import HOME_PROJECTS_DIR, TMP_DIR, PROJECT_EXTENSION
 import xarray as xr
+import utils.general_utils as gen_utils
+import utils.global_variables as global_vars
+from utils.global_constants import HOME_PROJECTS_DIR, PROJECT_EXTENSION
+from tkinter.filedialog import askopenfilename
 
 def get_project_metadata_file_path(project_path):
   for filename in os.listdir(project_path):
@@ -10,6 +13,21 @@ def get_project_metadata_file_path(project_path):
       return pathlib.Path(project_path, filename)
 
 # ---------------------------------------------------------------------------------
+
+def open_project(root_window):
+  project_metadata_file_path = askopenfilename(
+    title='Selecciona el proyecto',
+    initialdir=HOME_PROJECTS_DIR,
+    filetypes=[('sia files', f'*{PROJECT_EXTENSION}')]
+  )
+  if not project_metadata_file_path:
+    return
+  project_path = pathlib.Path(project_metadata_file_path).parent.absolute()
+  global_vars.current_project_path = project_path
+  global_vars.current_project_dataset = get_dataset_project(project_path)
+
+  workspace_view = gen_utils.find_view(root_window, 'WorkspaceView')
+  gen_utils.change_view(root_window, workspace_view)
 
 def save_project(project_name, dataset_path=None):
   user_chose_select_data = dataset_path != None

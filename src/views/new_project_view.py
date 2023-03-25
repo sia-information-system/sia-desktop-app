@@ -1,12 +1,10 @@
 import tkinter as tk
 import ttkbootstrap as ttk
-from tkinter.filedialog import askopenfilename
+import utils.general_utils as gen_utils
 import utils.global_variables as global_vars
 import utils.project_manager as prj_mgmt
+from tkinter.filedialog import askopenfilename
 from utils.global_constants import HOME_DATASETS_DIR
-from utils.general_utils import find_view, change_view
-from views.workspace_view import WorkspaceView
-from views.data_extractor_view import DataExtractorView
 
 class NewProjectView(ttk.Frame):
   def __init__(self, master):
@@ -143,11 +141,11 @@ class NewProjectView(ttk.Frame):
 
     # Redirect to the next view.
     if get_data_option == 'select_dataset':
-      workspace_view = find_view(self.root_window, WorkspaceView)
-      change_view(self.root_window, workspace_view)
+      workspace_view = gen_utils.find_view(self.root_window, 'WorkspaceView')
+      gen_utils.change_view(self.root_window, workspace_view)
     else:
-      data_extractor_view = find_view(self.root_window, DataExtractorView)
-      change_view(self.root_window, data_extractor_view)
+      data_extractor_view = gen_utils.find_view(self.root_window, 'DataExtractorView')
+      gen_utils.change_view(self.root_window, data_extractor_view)
 
   def __fields_validation(self, project_name, get_data_option, dataset_path):
     if not project_name:

@@ -1,10 +1,11 @@
-import ttkbootstrap as ttk
-from tkinter import messagebox
-from ttkbootstrap.dialogs.dialogs import QueryDialog, Messagebox
-import utils.global_variables as global_vars
-import utils.project_manager as prj_mgmt
 import textwrap
 import string
+import ttkbootstrap as ttk
+import utils.general_utils as gen_utils
+import utils.global_variables as global_vars
+import utils.project_manager as prj_mgmt
+from tkinter import messagebox
+from ttkbootstrap.dialogs.dialogs import QueryDialog, Messagebox
 
 # Docs for QueryDialog: https://ttkbootstrap.readthedocs.io/en/latest/api/dialogs/querydialog/
 class NewSheetDialogBox(QueryDialog):
@@ -50,7 +51,7 @@ class NewSheetDialogBox(QueryDialog):
 
   def on_submit(self, *_):
     '''Override. Save result, destroy the toplevel, and apply any post-hoc data manipulations.'''
-    self._result = self._initial_focus.get()
+    self._result = self._initial_focus.get() # Entry worksheet name.
     self.chart_type_cb_result = self.chart_type_cb.get()
 
     # Validate data.
@@ -125,12 +126,6 @@ class NewSheetDialogBox(QueryDialog):
     ttk.Separator(self._toplevel).pack(fill='x')
     frame.pack(side='bottom', fill='x', anchor='s')
 
-  def apply(self):
-    '''Override. This method is called automatically to process the data after the dialog is destroyed'''
-    print(f'Datos:')
-    print(f'_result : "{self._result}"')
-    print(f'chart_type_cb_result : "{self.chart_type_cb_result}"')
-
   def get_sheet_data(self):
     return {
       'proceed_to_add': self.proceed_to_add,
@@ -142,45 +137,39 @@ class NewSheetDialogBox(QueryDialog):
 class WorkspaceView(ttk.Frame):
   def __init__(self, master):
     super().__init__(master)
+    self.root_window = master # Main window. Used to change views.
 
-    self.project_dataset = None
     self.project_path = None
+    self.project_dataset = None
     self.notebook = None
 
   def load_view(self):
     self.pack(fill='both', expand=1) # Load view frame.
 
-    # Load current dataset.
-    self.project_dataset = global_vars.current_project_dataset
-    print(f'Project_dataset: {self.project_dataset}')
-    # Load current project path.
+    # Load current project path and current dataset
     self.project_path = global_vars.current_project_path
+    self.project_dataset = global_vars.current_project_dataset
 
     project_name = prj_mgmt.get_project_name(project_path=self.project_path)
     title = 'Proyecto: ' + string.capwords(project_name)
-    label = ttk.Label(self, text=title, font=('Helvetica', 14))
-    label.pack(pady=10)
+    project_title_label = ttk.Label(self, text=title, font=('Helvetica', 14))
+    project_title_label.pack(pady=10)
 
-    current_project_label = ttk.Label(self, text=f'Ruta de proyecto actual: {self.project_path}')
-    current_project_label.pack(pady=10)
+    if not self.project_dataset:
+      self.__create_empty_project_frame()
+      return
+
+    # Notebook.
 
     self.notebook = ttk.Notebook(self, bootstyle="secondary")
     self.notebook.pack(fill='both', expand=1, padx=20)
+    self.__load_tabs_from_json(self.notebook, self.project_path)
 
-    # TODO: Revisar que si el proyecto no tiene hoja, obligar a crear una, siempre y cuando ya existe un proyecto cargado.
-    main_sheet_tab = ttk.Frame(self.notebook)
-    main_sheet_tab.pack(fill='both', expand=1)
-    label = ttk.Label(main_sheet_tab, text='Contenido dentro de la hoja. Nombre de la hoja: Hoja principal.', font=('Helvetica', 12))
-    label.pack(pady=30)
-    self.notebook.add(main_sheet_tab, text='Hoja principal')
-
-    if self.project_path:
-      self.__load_tabs_from_json(self.notebook, self.project_path)
+    # Buttons.
 
     buttons_frame = ttk.Frame(self)
     buttons_frame.pack(pady=10)
 
-    # TODO: Deshabilitar los botones cuando no haya un proyecto cargado.
     new_sheet_window = NewSheetDialogBox(prompt='Datos de la hoja de trabajo', parent=self)
     add_tab_button = ttk.Button(
       buttons_frame, 
@@ -240,3 +229,40 @@ class WorkspaceView(ttk.Frame):
     for worksheet in worksheets:
       tab_name = worksheet['name']
       self.__add_tab(tab_name)
+
+  def __create_empty_project_frame(self):
+    frame = ttk.Frame(self)
+    frame.pack(fill='both', expand=1)
+
+    label = ttk.Label(frame, text='No hay proyecto cargado.', font=('Helvetica', 12))
+    label.pack(pady=10)
+
+    label = ttk.Label(frame, text='¿Desea crear o abrir uno?', font=('Helvetica', 12))
+    label.pack(pady=30)
+
+    buttons_frame = ttk.Frame(frame)
+    buttons_frame.pack(pady=10)
+
+    create_project_button = ttk.Button(
+      buttons_frame,
+      text='Crear proyecto',
+      command=self.__redirect_to_create_project,
+      bootstyle='default',
+      width=30
+    )
+    create_project_button.pack(pady=10, padx=(0, 10), side='left')
+
+    open_project_button = ttk.Button(
+      buttons_frame,
+      text='Abrir proyecto',
+      command=lambda: prj_mgmt.open_project(self.root_window),
+      bootstyle='default',
+      width=30
+    )
+    open_project_button.pack(pady=10, padx=(10, 0), side='left')
+
+    return frame
+
+  def __redirect_to_create_project(self):
+    new_project_view = gen_utils.find_view(self.root_window, 'NewProjectView')
+    gen_utils.change_view(self.root_window, new_project_view)

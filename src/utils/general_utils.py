@@ -1,8 +1,7 @@
-import ttkbootstrap as ttk
 import os
 import pathlib
 import sys
-import traceback
+import ttkbootstrap as ttk
 from configparser import ConfigParser
 
 def read_config():
@@ -45,8 +44,13 @@ def get_directory_from_config(config_var, start_from='root'):
     sys.exit(1)
 
 def find_view(root_window, view_class):
+  '''
+  view_class: String class of the view to find.
+  '''
+  # Format used in tkinter to represent a class who inherits from ttk.Frame
+  format_view_class = '.!' + view_class.lower()
   for view in root_window.winfo_children():
-    if isinstance(view, view_class):
+    if format_view_class == str(view):
       return view
   return None
 
