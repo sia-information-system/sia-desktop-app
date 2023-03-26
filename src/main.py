@@ -74,5 +74,6 @@ class App:
 
 if __name__ == '__main__':
   window = ttk.Window(themename='cosmo')
+  window.wm_state('zoomed')
   app = App(window)
   window.mainloop()

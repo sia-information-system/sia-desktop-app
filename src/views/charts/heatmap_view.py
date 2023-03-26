@@ -1,9 +1,9 @@
 import tkinter as tk
 import ttkbootstrap as ttk
 from ttkbootstrap.tooltip import ToolTip
-from views.templates.scrollable_view import ScrollableView
+from views.templates.tab_view import TabView
 
-class HeatMapView(ScrollableView):
+class HeatMapView(TabView):
   def __init__(self, master):
     super().__init__(master)
     self.__build_method = None
@@ -16,12 +16,12 @@ class HeatMapView(ScrollableView):
 
     # ------------------ Elements of the view  ------------------
 
-    title_view_label = ttk.Label(self.scroll_frame, text='Heatmap', font=('Helvetica', 14))
+    title_view_label = ttk.Label(self.col2_user_params, text='Heatmap', font=('TkDefaultFont', 14))
     title_view_label.pack(pady=10)
 
     # Form.
-    form_frame = ttk.Frame(self.scroll_frame, bootstyle='default')
-    form_frame.pack(fill='x', padx=100, pady=10)
+    form_frame = ttk.Frame(self.col2_user_params, bootstyle='default')
+    form_frame.pack(fill='x', padx=30, pady=10)
 
     form_entries_frame = ttk.Frame(form_frame)
     form_entries_frame.pack(fill='x')
@@ -69,7 +69,7 @@ class HeatMapView(ScrollableView):
     # Apply button.
     connect_button = ttk.Button(
       form_frame, 
-      text='Aplicar', 
+      text='Generar gráfico', 
       command=lambda: self.__generate_chart(
         datasets_cb.get(), build_method_cb.get(),
         variable_cb.get(), depth_cb.get(),

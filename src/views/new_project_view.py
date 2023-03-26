@@ -21,7 +21,7 @@ class NewProjectView(ttk.Frame):
   def load_view(self):
     self.pack(fill='both', expand=1)
 
-    title_view_label = ttk.Label(self, text='Configuración del nuevo proyecto', font=('Helvetica', 14))
+    title_view_label = ttk.Label(self, text='Configuración del nuevo proyecto', font=('TkDefaultFont', 14))
     title_view_label.pack(pady=10)
 
     # Set default values.

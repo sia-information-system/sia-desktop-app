@@ -6,6 +6,7 @@ import utils.global_variables as global_vars
 import utils.project_manager as prj_mgmt
 from tkinter import messagebox
 from ttkbootstrap.dialogs.dialogs import QueryDialog, Messagebox
+from views.charts.heatmap_view import HeatMapView
 
 # Docs for QueryDialog: https://ttkbootstrap.readthedocs.io/en/latest/api/dialogs/querydialog/
 class NewSheetDialogBox(QueryDialog):
@@ -45,7 +46,7 @@ class NewSheetDialogBox(QueryDialog):
     chart_type_cb.bind('<KP_Enter>', self.on_submit)
     chart_type_cb.bind('<Escape>', self.on_cancel)
 
-    form_frame.pack(fill='x', expand=True)
+    form_frame.pack(fill='x', expand=1)
     self._initial_focus = name_entry
     self.chart_type_cb = chart_type_cb
 
@@ -152,7 +153,7 @@ class WorkspaceView(ttk.Frame):
 
     project_name = prj_mgmt.get_project_name(project_path=self.project_path)
     title = 'Proyecto: ' + string.capwords(project_name)
-    project_title_label = ttk.Label(self, text=title, font=('Helvetica', 14))
+    project_title_label = ttk.Label(self, text=title, font=('TkDefaultFont', 14))
     project_title_label.pack(pady=10)
 
     if not self.project_dataset:
@@ -199,12 +200,11 @@ class WorkspaceView(ttk.Frame):
       prj_mgmt.add_worksheet(self.project_path, sheet_data['name'], sheet_data['chart_type'])
 
   def __add_tab(self, tab_name):
-    frame_in_tab = ttk.Frame(self.notebook)
-    frame_in_tab.pack(fill='both', expand=1)
+    # TODO: Determinar el tipo de gráfico a mostrar en la nueva hoja.
+    heatmap_frame = HeatMapView(self.notebook)
+    heatmap_frame.load_view()
 
-    label = ttk.Label(frame_in_tab, text='Contenido dentro de la hoja. Nombre de la hoja: ' + tab_name + '.', font=('Helvetica', 12))
-    label.pack(pady=30)
-    result_add = self.notebook.add(frame_in_tab, text=tab_name)
+    result_add = self.notebook.add(heatmap_frame, text=tab_name)
     new_tab_index = self.notebook.index('end') - 1
     self.notebook.select(new_tab_index)
 
@@ -234,10 +234,10 @@ class WorkspaceView(ttk.Frame):
     frame = ttk.Frame(self)
     frame.pack(fill='both', expand=1)
 
-    label = ttk.Label(frame, text='No hay proyecto cargado.', font=('Helvetica', 12))
+    label = ttk.Label(frame, text='No hay proyecto cargado.', font=('TkDefaultFont', 12))
     label.pack(pady=10)
 
-    label = ttk.Label(frame, text='¿Desea crear o abrir uno?', font=('Helvetica', 12))
+    label = ttk.Label(frame, text='¿Desea crear o abrir uno?', font=('TkDefaultFont', 12))
     label.pack(pady=30)
 
     buttons_frame = ttk.Frame(frame)
