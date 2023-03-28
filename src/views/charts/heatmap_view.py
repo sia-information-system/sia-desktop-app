@@ -2,6 +2,11 @@ import tkinter as tk
 import ttkbootstrap as ttk
 from ttkbootstrap.tooltip import ToolTip
 from views.templates.tab_view import TabView
+import utils.global_variables as global_vars
+from omdepplotlib.chart_building import level_chart
+from utils.global_constants import TMP_DIR
+import pathlib
+from PIL import ImageTk, Image
 
 class HeatMapView(TabView):
   def __init__(self, master):
@@ -9,6 +14,11 @@ class HeatMapView(TabView):
     self.__build_method = None
     self.__static_build_method_frame = None
     self.__animated_build_method_frame = None
+
+    self.duration_unit_dict = {
+      'Frames por segundo': 'FRAMES_PER_SECOND',
+      'Segundos por frame': 'SECONDS_PER_FRAME'
+    }
 
   def load_view(self):
     self.pack(fill='both', expand=1)
@@ -26,21 +36,17 @@ class HeatMapView(TabView):
     form_entries_frame = ttk.Frame(form_frame)
     form_entries_frame.pack(fill='x')
 
-    label_text = 'Dataset a utilizar:'
-    datasets_list = ['foo', 'bar', 'baz']
-    datasets_cb = self.__create_combobox_row(form_entries_frame, label_text, datasets_list)
-
     label_text = 'Método de construcción:'
     build_method_list = ['Estático', 'Animado']
     build_method_cb = self.__create_combobox_row(form_entries_frame, label_text, build_method_list)
     build_method_cb.bind("<<ComboboxSelected>>", self.__selected_build_method_handler)
 
     label_text = 'Variable:'
-    variable_list = ['thetao', 'vo', 'uo', 'so', 'zos']
+    variable_list = ['thetao', 'vo', 'uo', 'so', 'zos'] # TODO: Get this list from the dataset.
     variable_cb = self.__create_combobox_row(form_entries_frame, label_text, variable_list)
 
     label_text = 'Profundidad [m]:'
-    depth_list = [0, 100, 250, 500, 1000]
+    depth_list = [0, 100, 250, 500, 1000] # TODO: Get this list from the dataset.
     default_depth = depth_list[0]
     depth_cb = self.__create_combobox_row(form_entries_frame, label_text, depth_list, default_depth)
 
@@ -48,7 +54,7 @@ class HeatMapView(TabView):
     chart_title_entry = self.__create_entry_row(form_entries_frame, label_text)
 
     label_text = 'Paleta de colores:'
-    palette_colors_list = ['OrRd', 'plasma', 'plasma', 'Greens', 'viridis']
+    palette_colors_list = ['OrRd', 'plasma', 'Greens', 'viridis']
     palette_colors_cb = self.__create_combobox_row(form_entries_frame, label_text, palette_colors_list)
 
     # Following entries will be hidden or shown depending on the selected build method.
@@ -61,7 +67,7 @@ class HeatMapView(TabView):
     self.__animated_build_method_frame = ttk.Frame(form_entries_frame)
     self.__animated_build_method_frame.pack_forget()
     label_text = 'Unidad de duración:'
-    duration_unit_list = ['Frames por segundo', 'Segundos por frame']
+    duration_unit_list = list(self.duration_unit_dict.keys())
     duration_cb = self.__create_combobox_row(self.__animated_build_method_frame, label_text, duration_unit_list)
     label_text = 'Duración'
     duration_entry = self.__create_entry_row(self.__animated_build_method_frame, label_text)
@@ -71,7 +77,7 @@ class HeatMapView(TabView):
       form_frame, 
       text='Generar gráfico', 
       command=lambda: self.__generate_chart(
-        datasets_cb.get(), build_method_cb.get(),
+        build_method_cb.get(),
         variable_cb.get(), depth_cb.get(),
         chart_title_entry.get(), palette_colors_cb.get(),
         target_date=target_date_entry.entry.get(),
@@ -129,7 +135,7 @@ class HeatMapView(TabView):
 
     date_entry_frame = ttk.Frame(row_frame)
     date_entry_frame.pack(side='left')
-    date_entry = ttk.DateEntry(date_entry_frame)
+    date_entry = ttk.DateEntry(date_entry_frame, dateformat='%Y-%m-%d')
     date_entry.pack()
 
     tooltip_label = ttk.Label(row_frame, text='Info')
@@ -143,7 +149,6 @@ class HeatMapView(TabView):
 
   def __generate_chart(
     self, 
-    datasets, 
     build_method, 
     variable, 
     depth, 
@@ -154,7 +159,6 @@ class HeatMapView(TabView):
     duration=None
   ):
     print('-----------------------------')
-    print(f'datasets: "{datasets}"')
     print(f'build_method: "{build_method}"')
     print(f'variable: "{variable}"')
     print(f'depth: "{depth}"')
@@ -163,15 +167,87 @@ class HeatMapView(TabView):
     print(f'target_date: "{target_date}"')
     print(f'duration_unit: "{duration_unit}"')
     print(f'duration: "{duration}"')
-    valid_fields = self.__fields_validation(datasets, build_method, variable, depth, chart_title, 
+    valid_fields = self.__fields_validation(build_method, variable, depth, chart_title, 
       palette_colors, target_date, duration_unit, duration)
-    if valid_fields:
-      # TODO: Continue with the chart generation.
-      pass
+    if not valid_fields:
+      return
+    # TODO: Revisar como resolver lo de los labels
+    plot_measure_label = {
+      'thetao': 'Temperature (C°)',
+      'vo': 'Northward velocity (m/s)',
+      'uo': 'Eastward velocity (m/s)',
+      'so': 'Salinity (PSU)',
+      'zos': 'Sea surface height (m)'
+    }
+
+    dataset = global_vars.current_project_dataset
+
+    chart_builder = level_chart.HeatMapBuilder(
+      dataset=dataset,
+      verbose=False)
+
+    if build_method == 'Estático':
+      dim_constraints = {
+        'time': [target_date],
+        'depth': [depth]
+      }
+      if variable == 'zos':
+        dim_constraints = {
+          'time': [target_date]
+        }
+      print(f'-> Heatmap static image for "{variable}" variable.')
+      chart_builder.build_static(
+        var_name=variable,
+        title=f'{chart_title} {target_date}',
+        var_label=plot_measure_label[variable],
+        dim_constraints=dim_constraints,
+        lat_dim_name='latitude', # TODO: Revisar si el usuario tendre que ingresar esto.
+        lon_dim_name='longitude', # TODO: Revisar si el usuario tendre que ingresar esto.
+        color_palette=palette_colors
+      )
+      print(f'-> Image built.')
+      chart_builder.save(
+        pathlib.Path(
+          TMP_DIR,
+          f'heatmap-{chart_title}'))
+      print(f'-> Image saved')
+      
+      print(f'Images stored in: {TMP_DIR}')
+
+      new_img_path = pathlib.Path(TMP_DIR, f'heatmap-{chart_title}.png')
+      self.chart_img = ImageTk.PhotoImage(Image.open(new_img_path))
+      self.chart_img_label.configure(image=self.chart_img)
+    else:
+      print(f'-> Heatmap gif for "{variable}" variable.')
+      dim_constraints = {
+        'depth': [depth]
+      }
+      if variable == 'zos':
+        dim_constraints = {}
+      chart_builder.build_animation(
+        var_name=variable,
+        title=chart_title,
+        var_label=plot_measure_label[variable],
+        dim_constraints=dim_constraints,
+        time_dim_name='time',
+        lat_dim_name='latitude',
+        lon_dim_name='longitude',
+        duration=int(duration),
+        duration_unit=self.duration_unit_dict[duration_unit],
+        color_palette=palette_colors)
+      chart_builder.save(
+        pathlib.Path(
+          TMP_DIR,
+          f'heatmap-{chart_title}-ANIMATION.gif'))
+    
+      print(f'Gifs stored in: {TMP_DIR}')
+
+      new_img_path = pathlib.Path(TMP_DIR, f'heatmap-{chart_title}-ANIMATION.gif')
+      self.chart_img = ImageTk.PhotoImage(Image.open(new_img_path))
+      self.chart_img_label.configure(image=self.chart_img)
   
   def __fields_validation(
     self, 
-    datasets, 
     build_method, 
     variable, 
     depth, 
@@ -184,7 +260,6 @@ class HeatMapView(TabView):
     chart_title = chart_title.strip()
     
     empty_fields = []
-    if datasets == '': empty_fields.append('Dataset')
     if build_method == '': empty_fields.append('Método de construcción')
     if variable == '': empty_fields.append('Variable')
     if depth == '': empty_fields.append('Profundidad')

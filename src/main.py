@@ -12,7 +12,8 @@ from views.user_manual_view import UserManualView
 class App:
   def __init__(self, window):
     self.window = window
-    self.title_app = 'Oceanographic Information System'
+    self.window.protocol('WM_DELETE_WINDOW', self.__on_close_app)
+    self.title_app = 'Sistema de Información Ambiental'
     self.window.title(self.title_app)
 
     # App placed in center of screen.
@@ -52,7 +53,7 @@ class App:
     file_menu.add_command(label='Guardar', command=lambda: print('Guardar'))
     file_menu.add_command(label='Cambiar fuente de datos', command=lambda: print('Cambiar fuente de datos'))
     file_menu.add_separator()
-    file_menu.add_command(label='Salir', command=self.window.quit)
+    file_menu.add_command(label='Salir', command=self.__on_close_app)
 
     # Create 'Espacio de trabajo' menu option.
     workspace_menu = tk.Menu(self.__menu_bar, tearoff=False)
@@ -69,6 +70,10 @@ class App:
     # Create 'Manual de usuario' menu option.
     user_manual_menu = tk.Menu(self.__menu_bar, tearoff=False)
     self.__menu_bar.add_command(label='Manual de usuario', command=lambda: gen_utils.change_view(self.window, self.user_manual_view))
+
+  def __on_close_app(self):
+    if tk.messagebox.askokcancel('Salir', '¿Quieres salir de la aplicación?'):
+      self.window.quit()
 
 #  ------------------ Main ------------------
 

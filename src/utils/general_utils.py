@@ -24,7 +24,7 @@ def get_directory_from_config(config_var, start_from='root'):
   if start_from == 'root':
     path_segments.extend([pathlib.Path(__file__).parent.absolute(), '..', '..'])
   elif start_from == 'user_home':
-    home_dirname='OISYS'
+    home_dirname='SIA'
     path_segments.extend([pathlib.Path.home(), home_dirname])
 
   try:

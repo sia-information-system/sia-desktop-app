@@ -7,13 +7,14 @@ from PIL import ImageTk, Image
 class TabView(ttk.Frame):
   def __init__(self, master):
     super().__init__(master, bootstyle='default')
-    self.chart_img = None
     self.__col1_arrow_btn = None
     self.__arrow_label = None
     self.__col2_params = None
     self.col2_user_params = None
     self.col2_real_values = None
     self.col3_chart = None
+    self.chart_img = None
+    self.chart_img_label = None
 
   def load_view(self):
     self.columnconfigure(0, minsize=50)
@@ -50,8 +51,8 @@ class TabView(ttk.Frame):
 
     image_path = pathlib.Path(ASSETS_DIR, 'images', 'heatmap-example.png')
     self.chart_img = ImageTk.PhotoImage(Image.open(image_path))
-    chart_label = ttk.Label(self.col3_chart, image = self.chart_img)
-    chart_label.pack(pady=20)
+    self.chart_img_label = ttk.Label(self.col3_chart, image=self.chart_img)
+    self.chart_img_label.pack(pady=20)
     save_chart_btn = ttk.Button(self.col3_chart, text='Guardar gráfico', bootstyle='primary')
     save_chart_btn.pack(pady=20)
 
