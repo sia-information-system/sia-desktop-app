@@ -1,3 +1,4 @@
+import tkinter as tk
 import ttkbootstrap as ttk
 from ttkbootstrap.scrolled import ScrolledFrame
 import pathlib
@@ -10,9 +11,10 @@ class TabView(ttk.Frame):
     self.__col1_arrow_btn = None
     self.__arrow_label = None
     self.__col2_params = None
-    self.col2_user_params = None
-    self.col2_real_values = None
-    self.col3_chart = None
+    self.col2_user_params_frame = None
+    self.col2_real_values_frame = None
+    self.__col3_chart = None
+    self.chart_and_btns_frame = None
     self.chart_img = None
     self.chart_img_label = None
 
@@ -21,6 +23,8 @@ class TabView(ttk.Frame):
     self.num_frames = None
     self.play_chart_btn = None
     self.gif_frame_duration_ms = 1000 # miliseconds
+
+    self.chart_builder = None
 
   def load_view(self):
     self.columnconfigure(0, minsize=50)
@@ -43,41 +47,47 @@ class TabView(ttk.Frame):
     params_notebook = ttk.Notebook(self.__col2_params, bootstyle='dark')
     params_notebook.pack(fill='both', expand=1, pady=10)
 
-    self.col2_user_params = ttk.Frame(params_notebook)
-    params_notebook.add(self.col2_user_params, text='Parametros')
+    self.col2_user_params_frame = ttk.Frame(params_notebook)
+    params_notebook.add(self.col2_user_params_frame, text='Parametros')
 
-    self.col2_real_values = ttk.Frame(params_notebook)
-    params_notebook.add(self.col2_real_values, text='Información de la visualización')
-    title_label = ttk.Label(self.col2_real_values, text='Valores reales de la visualización')
+    self.col2_real_values_frame = ttk.Frame(params_notebook)
+    params_notebook.add(self.col2_real_values_frame, text='Información de la visualización')
+    title_label = ttk.Label(self.col2_real_values_frame, text='Valores reales de la visualización')
     title_label.pack(pady=20)
 
     # Column 3
-    self.col3_chart = ttk.Frame(self, bootstyle='default') # TODO: Delete bootstyle after testing. success
-    self.col3_chart.grid(row=0, column=2, sticky='nsew')
+    self.__col3_chart = ttk.Frame(self, bootstyle='default') # TODO: Delete bootstyle after testing. success
+    self.__col3_chart.grid(row=0, column=2, sticky='nsew')
+
+    col3_chart_title = ttk.Label(self.__col3_chart, text='Gráfica', font=('TkDefaultFont', 14))
+    col3_chart_title.pack(pady=(10, 0))
+
+    self.chart_and_btns_frame = ttk.Frame(self.__col3_chart)
+    self.chart_and_btns_frame.pack(fill='both', expand=1)
 
     image_path = pathlib.Path(ASSETS_DIR, 'images', 'heatmap-example.png')
     self.chart_img = ImageTk.PhotoImage(Image.open(image_path))
-    self.chart_img_label = ttk.Label(self.col3_chart, image=self.chart_img)
-    self.chart_img_label.pack(pady=20)
+    self.chart_img_label = ttk.Label(self.chart_and_btns_frame, image=self.chart_img)
+    self.chart_img_label.pack(pady=(10, 0))
     save_chart_btn = ttk.Button(
-      self.col3_chart, 
+      self.chart_and_btns_frame, 
       text='Guardar gráfico', 
+      command=self.__save_chart,
       width=20,
       bootstyle='primary'
     )
-    save_chart_btn.pack(pady=(20, 10))
+    save_chart_btn.pack(pady=(10, 10))
     self.play_chart_btn = ttk.Button(
-      self.col3_chart, 
+      self.chart_and_btns_frame, 
       text='Reproducir gráfico',
       command=self.__start_gif,
       width=20,
       bootstyle='success'
     )
 
-  def load_gif_images(self, gif_path):
-    print('Se llamo a load_gif_images')
+  def get_gif_frames(self, gif_buffer):
     frames = []
-    with Image.open(gif_path) as im:
+    with Image.open(gif_buffer) as im:
       try:
         while True:
           frames.append(im.copy())
@@ -114,3 +124,16 @@ class TabView(ttk.Frame):
     # Recursive.
     self.after(self.gif_frame_duration_ms, self.__play_gif)
 
+  def __save_chart(self):
+    file_path = tk.filedialog.asksaveasfilename(defaultextension='.png', filetypes=[('Archivos PNG', '*.png'), ('Archivos GIF', '*.gif')])
+    if not file_path:
+      return
+
+    extension = pathlib.Path(file_path).suffix
+    extension = extension.lower()
+    if extension not in ['.png', '.gif']:
+      tk.messagebox.showerror(title='Error', message='El archivo debe ser de tipo PNG o GIF.')
+      return
+
+    self.chart_builder.save(pathlib.Path(file_path))
+    tk.messagebox.showinfo(title='Información', message='La gráfica se guardo con éxito.')

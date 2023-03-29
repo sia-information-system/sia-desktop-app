@@ -4,9 +4,10 @@ from ttkbootstrap.tooltip import ToolTip
 from views.templates.tab_view import TabView
 import utils.global_variables as global_vars
 from omdepplotlib.chart_building import level_chart
-from utils.global_constants import TMP_DIR
 import pathlib
 from PIL import ImageTk, Image
+from datetime import datetime
+import utils.dataset_utils as dataset_utils
 
 class HeatMapView(TabView):
   def __init__(self, master):
@@ -15,9 +16,21 @@ class HeatMapView(TabView):
     self.__static_build_method_frame = None
     self.__animated_build_method_frame = None
 
+    self.variable_list = dataset_utils.get_variables()
+    self.depth_list = dataset_utils.get_depth_values()
     self.duration_unit_dict = {
       'Frames por segundo': 'FRAMES_PER_SECOND',
       'Segundos por frame': 'SECONDS_PER_FRAME'
+    }
+
+    self.__progress_bar = None
+    # TODO: Revisar de donde sacar lo de los labels.
+    self.plot_measure_label = {
+      'thetao': 'Temperature (C°)',
+      'vo': 'Northward velocity (m/s)',
+      'uo': 'Eastward velocity (m/s)',
+      'so': 'Salinity (PSU)',
+      'zos': 'Sea surface height (m)'
     }
 
   def load_view(self):
@@ -26,11 +39,11 @@ class HeatMapView(TabView):
 
     # ------------------ Elements of the view  ------------------
 
-    title_view_label = ttk.Label(self.col2_user_params, text='Heatmap', font=('TkDefaultFont', 14))
+    title_view_label = ttk.Label(self.col2_user_params_frame, text='Heatmap', font=('TkDefaultFont', 14))
     title_view_label.pack(pady=10)
 
     # Form.
-    form_frame = ttk.Frame(self.col2_user_params, bootstyle='default')
+    form_frame = ttk.Frame(self.col2_user_params_frame, bootstyle='default')
     form_frame.pack(fill='x', padx=30, pady=10)
 
     form_entries_frame = ttk.Frame(form_frame)
@@ -42,13 +55,11 @@ class HeatMapView(TabView):
     build_method_cb.bind("<<ComboboxSelected>>", self.__selected_build_method_handler)
 
     label_text = 'Variable:'
-    variable_list = ['thetao', 'vo', 'uo', 'so', 'zos'] # TODO: Get this list from the dataset.
-    variable_cb = self.__create_combobox_row(form_entries_frame, label_text, variable_list)
+    variable_cb = self.__create_combobox_row(form_entries_frame, label_text, self.variable_list)
 
     label_text = 'Profundidad [m]:'
-    depth_list = [0, 100, 250, 500, 1000] # TODO: Get this list from the dataset.
-    default_depth = depth_list[0]
-    depth_cb = self.__create_combobox_row(form_entries_frame, label_text, depth_list, default_depth)
+    default_depth = self.depth_list[0]
+    depth_cb = self.__create_combobox_row(form_entries_frame, label_text, self.depth_list, default_depth)
 
     label_text = 'Título del gráfico:'
     chart_title_entry = self.__create_entry_row(form_entries_frame, label_text)
@@ -71,21 +82,36 @@ class HeatMapView(TabView):
     duration_cb = self.__create_combobox_row(self.__animated_build_method_frame, label_text, duration_unit_list)
     label_text = 'Duración'
     duration_entry = self.__create_entry_row(self.__animated_build_method_frame, label_text)
+    label_text = 'Fecha de inicio:'
+    start_date_entry = self.__create_date_entry_row(self.__animated_build_method_frame, label_text)
+    label_text = 'Fecha de fin:'
+    end_date_entry = self.__create_date_entry_row(self.__animated_build_method_frame, label_text)
+
 
     # Apply button.
     connect_button = ttk.Button(
       form_frame, 
       text='Generar gráfico', 
-      command=lambda: self.__generate_chart(
+      command=lambda: self.__start_creation_chart(
         build_method_cb.get(),
         variable_cb.get(), depth_cb.get(),
         chart_title_entry.get(), palette_colors_cb.get(),
-        target_date=target_date_entry.entry.get(),
-        duration_unit=duration_cb.get(),
-        duration=duration_entry.get()
+        target_date=target_date_entry.entry.get(), # Only for static build method.
+        duration_unit=duration_cb.get(), duration=duration_entry.get(), # Only for animated build method.
+        start_date=start_date_entry.entry.get(), end_date=end_date_entry.entry.get() # Only for animated build method.
       )
     )
     connect_button.pack(pady=10)
+
+    self.__progress_bar = ttk.Progressbar(
+      self.col2_user_params_frame,
+      maximum=40, 
+      mode='determinate',
+      length=100,
+      value=20,
+      bootstyle='success striped'
+    )
+    self.__show_and_run_progress_bar()
 
     # TODO: Display image in scroll_frame (hide by default?).
     # TODO: Display info about dataset in scroll_frame (hide by default).
@@ -141,22 +167,23 @@ class HeatMapView(TabView):
     tooltip_label = ttk.Label(row_frame, text='Info')
     tooltip_label.pack(side='left', padx=10)
     text_info = 'Clic izquierdo en la flecha para mover el calendario un mes.\n'
-    text_info += 'Clic derecho en la flecha para mover el calendario un año.\n'
-    text_info += 'Clic izquierdo en el título para restablecer el calendario a la fecha actual.'
+    text_info += 'Clic derecho en la flecha para mover el calendario un año.'
     ToolTip(tooltip_label, text=text_info, bootstyle='info-inverse')
 
     return date_entry
 
-  def __generate_chart(
-    self, 
-    build_method, 
-    variable, 
-    depth, 
-    chart_title, 
+  def __start_creation_chart(
+    self,
+    build_method,
+    variable,
+    depth,
+    chart_title,
     palette_colors,
     target_date=None,
     duration_unit=None,
-    duration=None
+    duration=None,
+    start_date=None,
+    end_date=None
   ):
     print('-----------------------------')
     print(f'build_method: "{build_method}"')
@@ -167,99 +194,110 @@ class HeatMapView(TabView):
     print(f'target_date: "{target_date}"')
     print(f'duration_unit: "{duration_unit}"')
     print(f'duration: "{duration}"')
+    print(f'start_date: "{start_date}"')
+    print(f'end_date: "{end_date}"')
+
+    self.__show_and_run_progress_bar()
+    self.chart_and_btns_frame.pack_forget()
+
     valid_fields = self.__fields_validation(build_method, variable, depth, chart_title, 
-      palette_colors, target_date, duration_unit, duration)
+      palette_colors, target_date, duration_unit, duration, start_date, end_date)
     if not valid_fields:
       return
-    # TODO: Revisar como resolver lo de los labels
-    plot_measure_label = {
-      'thetao': 'Temperature (C°)',
-      'vo': 'Northward velocity (m/s)',
-      'uo': 'Eastward velocity (m/s)',
-      'so': 'Salinity (PSU)',
-      'zos': 'Sea surface height (m)'
-    }
 
     dataset = global_vars.current_project_dataset
-
-    chart_builder = level_chart.HeatMapBuilder(
-      dataset=dataset,
-      verbose=False)
-
+    self.chart_builder = level_chart.HeatMapBuilder(dataset=dataset)
     if self.__build_method == 'static':
-      dim_constraints = {
-        'time': [target_date],
-        'depth': [depth]
-      }
-      if variable == 'zos':
-        dim_constraints = {
-          'time': [target_date]
-        }
-      print(f'-> Heatmap static image for "{variable}" variable.')
-      chart_builder.build_static(
-        var_name=variable,
-        title=chart_title,
-        var_label=plot_measure_label[variable],
-        dim_constraints=dim_constraints,
-        lat_dim_name='latitude', # TODO: Revisar si el usuario tendre que ingresar esto.
-        lon_dim_name='longitude', # TODO: Revisar si el usuario tendre que ingresar esto.
-        color_palette=palette_colors
-      )
-      chart_builder.save(
-        pathlib.Path(
-          TMP_DIR,
-          f'heatmap-{chart_title}'
-        )
-      )
-
-      new_img_path = pathlib.Path(TMP_DIR, f'heatmap-{chart_title}.png')
-      self.chart_img = ImageTk.PhotoImage(Image.open(new_img_path))
-      self.chart_img_label.configure(image=self.chart_img)
-      # Hide button to play gif.
-      self.play_chart_btn.pack_forget()
+      self.__generate_static_chart(variable, depth, chart_title, palette_colors,
+        target_date)
     elif self.__build_method == 'animated':
-      print(f'-> Heatmap gif for "{variable}" variable.')
+      self.__generate_animated_chart(variable, depth, chart_title, palette_colors,
+        duration_unit, duration, start_date, end_date)
+
+    self.__stop_and_hide_progress_bar()
+    self.chart_and_btns_frame.pack(fill='both', expand=1)
+
+  def __generate_static_chart(
+    self,
+    variable,
+    depth,
+    chart_title,
+    palette_colors,
+    target_date
+  ):
+    dim_constraints = {
+      'time': [target_date],
+      'depth': [depth]
+    }
+    if variable == 'zos':
       dim_constraints = {
-        'depth': [depth]
+        'time': [target_date]
       }
-      if variable == 'zos':
-        dim_constraints = {}
+    print(f'-> Heatmap static image for "{variable}" variable.')
+    self.chart_builder.build_static(
+      var_name=variable,
+      title=chart_title,
+      var_label=self.plot_measure_label[variable],
+      dim_constraints=dim_constraints,
+      lat_dim_name='latitude', # TODO: Revisar si el usuario tendre que ingresar esto.
+      lon_dim_name='longitude', # TODO: Revisar si el usuario tendre que ingresar esto.
+      color_palette=palette_colors
+    )
 
-      duration_unit = self.duration_unit_dict[duration_unit]
-      duration = int(duration) if duration_unit == 'FRAMES_PER_SECOND' else round(float(duration), 2)
+    img_buffer = self.chart_builder._chart.get_buffer()
+    self.chart_img = ImageTk.PhotoImage(Image.open(img_buffer))
+    self.chart_img_label.configure(image=self.chart_img)
+    # Hide button to play gif.
+    self.play_chart_btn.pack_forget()
 
-      chart_builder.build_animation(
-        var_name=variable,
-        title=chart_title,
-        var_label=plot_measure_label[variable],
-        dim_constraints=dim_constraints,
-        time_dim_name='time',
-        lat_dim_name='latitude',
-        lon_dim_name='longitude',
-        duration=duration,
-        duration_unit=duration_unit,
-        color_palette=palette_colors
-      )
-      chart_builder.save(
-        pathlib.Path(
-          TMP_DIR,
-          f'heatmap-{chart_title}-ANIMATION.gif'
-        )
-      )
+  def __generate_animated_chart(
+    self,
+    variable,
+    depth,
+    chart_title,
+    palette_colors,
+    duration_unit,
+    duration,
+    start_date,
+    end_date
+  ):
+    print(f'-> Heatmap gif for "{variable}" variable.')
+    dim_constraints = {
+      'depth': [depth],
+      'time': slice(start_date, end_date)
+    }
+    if variable == 'zos':
+      dim_constraints = {}
 
-      new_img_path = pathlib.Path(TMP_DIR, f'heatmap-{chart_title}-ANIMATION.gif')
-      self.gif_images = self.load_gif_images(new_img_path)
-      self.num_frames = len(self.gif_images)
-      self.current_frame = 0
-      if duration_unit == 'SECONDS_PER_FRAME':
-        self.gif_frame_duration_ms = round(duration * 1000)
-      elif duration_unit == 'FRAMES_PER_SECOND':
-        self.gif_frame_duration_ms = round(1000 / duration)
-      # Show first frame
-      self.chart_img = self.gif_images[0]
-      self.chart_img_label.configure(image=self.chart_img)
-      # Show button to play gif.
-      self.play_chart_btn.pack()
+    duration_unit = self.duration_unit_dict[duration_unit]
+    duration = int(duration) if duration_unit == 'FRAMES_PER_SECOND' else round(float(duration), 2)
+
+    self.chart_builder.build_animation(
+      var_name=variable,
+      title=chart_title,
+      var_label=self.plot_measure_label[variable],
+      dim_constraints=dim_constraints,
+      time_dim_name='time',
+      lat_dim_name='latitude',
+      lon_dim_name='longitude',
+      duration=duration,
+      duration_unit=duration_unit,
+      color_palette=palette_colors
+    )
+
+    gif_buffer = self.chart_builder._chart.get_buffer()
+    self.gif_images = self.get_gif_frames(gif_buffer)
+    self.num_frames = len(self.gif_images)
+    self.current_frame = 0
+    if duration_unit == 'SECONDS_PER_FRAME':
+      self.gif_frame_duration_ms = round(duration * 1000)
+    elif duration_unit == 'FRAMES_PER_SECOND':
+      self.gif_frame_duration_ms = round(1000 / duration)
+    # Show first frame
+    self.chart_img = self.gif_images[0]
+    self.chart_img_label.configure(image=self.chart_img)
+    # Show button to play gif.
+    self.play_chart_btn.pack()
 
   def __fields_validation(
     self, 
@@ -270,7 +308,9 @@ class HeatMapView(TabView):
     palette_colors,
     target_date=None,
     duration_unit=None,
-    duration=None
+    duration=None,
+    start_date=None,
+    end_date=None
   ):
     chart_title = chart_title.strip()
     
@@ -284,9 +324,16 @@ class HeatMapView(TabView):
     if self.__build_method == 'static':
       if target_date == '' or target_date == None:
         empty_fields.append('Fecha de objetivo')
+      try:
+        target_date = datetime.strptime(target_date, '%Y-%m-%d')
+      except:
+        message = 'La fecha objetivo debe tener el formato "YYYY-MM-DD".'
+        tk.messagebox.showerror(title='Error', message=message)
+        return False
     elif self.__build_method == 'animated':
       if duration_unit == '' or duration_unit == None:
         empty_fields.append('Unidad de duración')
+
       duration = duration.strip()
       if duration == '' or duration == None:
         empty_fields.append('Duración')
@@ -312,6 +359,22 @@ class HeatMapView(TabView):
             tk.messagebox.showerror(title='Error', message=message)
             return False
 
+      if start_date == '' or start_date == None:
+        empty_fields.append('Fecha inicial')
+      if end_date == '' or end_date == None:
+        empty_fields.append('Fecha final')
+      try:
+        start_date = datetime.strptime(start_date, '%Y-%m-%d')
+        end_date = datetime.strptime(end_date, '%Y-%m-%d')
+      except:
+        message = 'Las fechas deben tener el formato "YYYY-MM-DD".'
+        tk.messagebox.showerror(title='Error', message=message)
+        return False
+      if start_date > end_date:
+        message = 'La fecha inicial debe ser menor o igual a la fecha final.'
+        tk.messagebox.showerror(title='Error', message=message)
+        return False
+
     if len(empty_fields) > 0:
       message = 'Todos los campos son obligatorios. Datos faltantes: \n'
       message += ', '.join(empty_fields)
@@ -330,3 +393,14 @@ class HeatMapView(TabView):
       self.__build_method = 'animated'
       self.__animated_build_method_frame.pack(fill='x')
       self.__static_build_method_frame.pack_forget()
+
+  def __show_and_run_progress_bar(self):
+    # print('se llamo a show progress bar')
+    self.__progress_bar.pack(pady=10)
+    self.__progress_bar.start()
+
+  def __stop_and_hide_progress_bar(self):
+    pass
+    # print('se llamo a stop and hide progress bar')
+    # self.__progress_bar.stop()
+    # self.__progress_bar.pack_forget()
