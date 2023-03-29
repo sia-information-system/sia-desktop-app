@@ -50,7 +50,7 @@ class App:
     self.__menu_bar.add_cascade(label='Archivo', menu=file_menu)
     file_menu.add_command(label='Nuevo Proyecto', command=lambda: gen_utils.change_view(self.window, self.new_project_view))
     file_menu.add_command(label='Abrir Proyecto', command=lambda: prj_mgmt.open_project(self.window))
-    file_menu.add_command(label='Guardar', command=lambda: print('Guardar'))
+    file_menu.add_command(label='Guardar Proyecto', command=lambda: print('Guardar'))
     file_menu.add_command(label='Cambiar fuente de datos', command=lambda: print('Cambiar fuente de datos'))
     file_menu.add_separator()
     file_menu.add_command(label='Salir', command=self.__on_close_app)

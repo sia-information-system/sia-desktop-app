@@ -96,12 +96,12 @@ class HeatMapView(TabView):
 
     label_frame = ttk.Frame(row_frame)
     label_frame.pack(fill='x', side='left')
-    title_label = ttk.Label(label_frame, text=label_text, width=30)
+    title_label = ttk.Label(label_frame, text=label_text, width=25)
     title_label.pack(fill='x')
 
     combobox_frame = ttk.Frame(row_frame)
     combobox_frame.pack(fill='x', side='right', expand=1)
-    combobox = ttk.Combobox(combobox_frame, values=options, state='readonly')
+    combobox = ttk.Combobox(combobox_frame, values=options, state='readonly', width=35)
     if default_option != None:
       combobox.set(default_option)
     combobox.pack(fill='x')
@@ -114,12 +114,12 @@ class HeatMapView(TabView):
 
     label_frame = ttk.Frame(row_frame)
     label_frame.pack(fill='x', side='left')
-    title_label = ttk.Label(label_frame, text=label_text, width=30)
+    title_label = ttk.Label(label_frame, text=label_text, width=25)
     title_label.pack(fill='x')
 
     entry_frame = ttk.Frame(row_frame)
     entry_frame.pack(fill='x', side='right', expand=1)
-    entry = ttk.Entry(entry_frame)
+    entry = ttk.Entry(entry_frame, width=35)
     entry.pack(fill='x')
 
     return entry
@@ -130,7 +130,7 @@ class HeatMapView(TabView):
 
     label_frame = ttk.Frame(row_frame)
     label_frame.pack(fill='x', side='left')
-    title_label = ttk.Label(label_frame, text=label_text, width=30)
+    title_label = ttk.Label(label_frame, text=label_text, width=25)
     title_label.pack(fill='x')
 
     date_entry_frame = ttk.Frame(row_frame)
@@ -186,7 +186,7 @@ class HeatMapView(TabView):
       dataset=dataset,
       verbose=False)
 
-    if build_method == 'Estático':
+    if self.__build_method == 'static':
       dim_constraints = {
         'time': [target_date],
         'depth': [depth]
@@ -198,32 +198,36 @@ class HeatMapView(TabView):
       print(f'-> Heatmap static image for "{variable}" variable.')
       chart_builder.build_static(
         var_name=variable,
-        title=f'{chart_title} {target_date}',
+        title=chart_title,
         var_label=plot_measure_label[variable],
         dim_constraints=dim_constraints,
         lat_dim_name='latitude', # TODO: Revisar si el usuario tendre que ingresar esto.
         lon_dim_name='longitude', # TODO: Revisar si el usuario tendre que ingresar esto.
         color_palette=palette_colors
       )
-      print(f'-> Image built.')
       chart_builder.save(
         pathlib.Path(
           TMP_DIR,
-          f'heatmap-{chart_title}'))
-      print(f'-> Image saved')
-      
-      print(f'Images stored in: {TMP_DIR}')
+          f'heatmap-{chart_title}'
+        )
+      )
 
       new_img_path = pathlib.Path(TMP_DIR, f'heatmap-{chart_title}.png')
       self.chart_img = ImageTk.PhotoImage(Image.open(new_img_path))
       self.chart_img_label.configure(image=self.chart_img)
-    else:
+      # Hide button to play gif.
+      self.play_chart_btn.pack_forget()
+    elif self.__build_method == 'animated':
       print(f'-> Heatmap gif for "{variable}" variable.')
       dim_constraints = {
         'depth': [depth]
       }
       if variable == 'zos':
         dim_constraints = {}
+
+      duration_unit = self.duration_unit_dict[duration_unit]
+      duration = int(duration) if duration_unit == 'FRAMES_PER_SECOND' else round(float(duration), 2)
+
       chart_builder.build_animation(
         var_name=variable,
         title=chart_title,
@@ -232,20 +236,31 @@ class HeatMapView(TabView):
         time_dim_name='time',
         lat_dim_name='latitude',
         lon_dim_name='longitude',
-        duration=int(duration),
-        duration_unit=self.duration_unit_dict[duration_unit],
-        color_palette=palette_colors)
+        duration=duration,
+        duration_unit=duration_unit,
+        color_palette=palette_colors
+      )
       chart_builder.save(
         pathlib.Path(
           TMP_DIR,
-          f'heatmap-{chart_title}-ANIMATION.gif'))
-    
-      print(f'Gifs stored in: {TMP_DIR}')
+          f'heatmap-{chart_title}-ANIMATION.gif'
+        )
+      )
 
       new_img_path = pathlib.Path(TMP_DIR, f'heatmap-{chart_title}-ANIMATION.gif')
-      self.chart_img = ImageTk.PhotoImage(Image.open(new_img_path))
+      self.gif_images = self.load_gif_images(new_img_path)
+      self.num_frames = len(self.gif_images)
+      self.current_frame = 0
+      if duration_unit == 'SECONDS_PER_FRAME':
+        self.gif_frame_duration_ms = round(duration * 1000)
+      elif duration_unit == 'FRAMES_PER_SECOND':
+        self.gif_frame_duration_ms = round(1000 / duration)
+      # Show first frame
+      self.chart_img = self.gif_images[0]
       self.chart_img_label.configure(image=self.chart_img)
-  
+      # Show button to play gif.
+      self.play_chart_btn.pack()
+
   def __fields_validation(
     self, 
     build_method, 
@@ -276,13 +291,26 @@ class HeatMapView(TabView):
       if duration == '' or duration == None:
         empty_fields.append('Duración')
       else:
-        try:
-          duration = int(duration)
-          if duration <= 0:
-            raise Exception
-        except:
-          tk.messagebox.showerror(title='Error', message='La duración debe ser un número entero positivo.')
-          return False
+        if self.duration_unit_dict[duration_unit] == 'FRAMES_PER_SECOND':
+          try:
+            duration = int(duration)
+            if duration <= 0 or duration > 24:
+              raise Exception
+          except:
+            message = 'La duración debe ser un número entero entre 1 y 24, '
+            message += f'cuando la unidad de duración es "{duration_unit}".'
+            tk.messagebox.showerror(title='Error', message=message)
+            return False
+        elif self.duration_unit_dict[duration_unit] == 'SECONDS_PER_FRAME':
+          try:
+            duration = round(float(duration), 2)
+            if duration <= 0 or duration > 10:
+              raise Exception
+          except:
+            message = 'La duración debe ser un número flotante mayor a 0 y menor o igual a 10, '
+            message += f'cuando la unidad de duración es "{duration_unit}".'
+            tk.messagebox.showerror(title='Error', message=message)
+            return False
 
     if len(empty_fields) > 0:
       message = 'Todos los campos son obligatorios. Datos faltantes: \n'
