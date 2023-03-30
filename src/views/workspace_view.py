@@ -8,6 +8,7 @@ from tkinter import messagebox
 from ttkbootstrap.dialogs.dialogs import QueryDialog, Messagebox
 from views.charts.heatmap_view import HeatMapView
 from views.charts.contour_map_view import ContourMapView
+from views.charts.single_point_time_series_view import SinglePointTimeSeriesView
 
 # Docs for QueryDialog: https://ttkbootstrap.readthedocs.io/en/latest/api/dialogs/querydialog/
 class NewSheetDialogBox(QueryDialog):
@@ -214,6 +215,8 @@ class WorkspaceView(ttk.Frame):
       chart_frame = HeatMapView(self.notebook)
     elif chart_type == 'CONTOUR_MAP':
       chart_frame = ContourMapView(self.notebook)
+    elif chart_type == 'TIME_SERIES':
+      chart_frame = SinglePointTimeSeriesView(self.notebook)
     chart_frame.load_view()
 
     result_add = self.notebook.add(chart_frame, text=tab_name)

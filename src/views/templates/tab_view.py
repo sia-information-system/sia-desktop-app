@@ -72,6 +72,10 @@ class TabView(ttk.Frame):
       example_chart_img_path = pathlib.Path(ASSETS_DIR, 'images', 'heatmap-example.png')
     elif self.chart_type == 'CONTOUR_MAP':
       example_chart_img_path = pathlib.Path(ASSETS_DIR, 'images', 'contourmap-example.png')
+    elif self.chart_type == 'TIME_SERIES':
+      example_chart_img_path = pathlib.Path(ASSETS_DIR, 'images', 'time-series-example.png')
+    else:
+      example_chart_img_path = pathlib.Path(ASSETS_DIR, 'images', 'heatmap-example.png')
     self.chart_img = ImageTk.PhotoImage(Image.open(example_chart_img_path))
     self.chart_img_label = ttk.Label(self.chart_and_btns_frame, image=self.chart_img)
     self.chart_img_label.pack(pady=(10, 0))

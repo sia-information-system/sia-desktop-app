@@ -22,3 +22,13 @@ def get_time_values(name_in_dataset='time'):
   time_values = dataset.coords[name_in_dataset].values
   time_values = [datetime.fromisoformat(np.datetime_as_string(dt, unit='s')) for dt in time_values]
   return time_values
+
+def get_longitude_values(name_in_dataset='longitude'):
+  dataset = global_vars.current_project_dataset
+  longitude_values = dataset.coords[name_in_dataset].values
+  return longitude_values
+
+def get_latitude_values(name_in_dataset='latitude'):
+  dataset = global_vars.current_project_dataset
+  latitude_values = dataset.coords[name_in_dataset].values
+  return latitude_values
