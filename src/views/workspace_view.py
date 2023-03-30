@@ -7,6 +7,7 @@ import utils.project_manager as prj_mgmt
 from tkinter import messagebox
 from ttkbootstrap.dialogs.dialogs import QueryDialog, Messagebox
 from views.charts.heatmap_view import HeatMapView
+from views.charts.contour_map_view import ContourMapView
 
 # Docs for QueryDialog: https://ttkbootstrap.readthedocs.io/en/latest/api/dialogs/querydialog/
 class NewSheetDialogBox(QueryDialog):
@@ -15,6 +16,13 @@ class NewSheetDialogBox(QueryDialog):
     self.chart_type_cb = None # Combobox widget for chart type.
     self.chart_type_cb_result = None # Value of the combobox widget.
     self.proceed_to_add = False
+    self.chart_type_dict = {
+      'Mapa de calor': 'HEATMAP',
+      'Curva de nivel': 'CONTOUR_MAP',
+      'Corte vertical/horizontal': 'VERTICAL/HORIZONTAL_SLICE',
+      'Serie de tiempo': 'TIME_SERIES',
+      'Perfil vertical': 'VERTICAL_PROFILE'
+    }
 
   def create_body(self, master):
     '''Override. Adds the form section.'''
@@ -38,7 +46,7 @@ class NewSheetDialogBox(QueryDialog):
 
     combobox_label = ttk.Label(form_frame, text='Tipo de visualización:')
     combobox_label.pack(pady=(0, 5), fill='x', anchor='n')
-    chart_types = ['Mapa de calor', 'Curva de nivel', 'Corte vertical/horizontal', 'Serie de tiempo', 'Perfil vertical']
+    chart_types = list(self.chart_type_dict.keys())
     chart_type_cb = ttk.Combobox(form_frame, values=chart_types, state='readonly')
     chart_type_cb.pack(fill='both', pady=(10, 0))
     chart_type_cb.pack(pady=(0, 10), fill='x')
@@ -131,7 +139,7 @@ class NewSheetDialogBox(QueryDialog):
     return {
       'proceed_to_add': self.proceed_to_add,
       'name': self._result, 
-      'chart_type': self.chart_type_cb_result
+      'chart_type': self.chart_type_dict[self.chart_type_cb_result]
     }
 
 
@@ -195,16 +203,20 @@ class WorkspaceView(ttk.Frame):
     sheet_data = new_sheet_window.get_sheet_data()
     if sheet_data['proceed_to_add']:
       # Add tab to notebook.
-      self.__add_tab(sheet_data['name'])
+      self.__add_tab(sheet_data['name'], sheet_data['chart_type'])
       # Save worksheet to project.
       prj_mgmt.add_worksheet(self.project_path, sheet_data['name'], sheet_data['chart_type'])
 
-  def __add_tab(self, tab_name):
+  def __add_tab(self, tab_name, chart_type):
     # TODO: Determinar el tipo de gráfico a mostrar en la nueva hoja.
-    heatmap_frame = HeatMapView(self.notebook)
-    heatmap_frame.load_view()
+    chart_frame = None
+    if chart_type == 'HEATMAP':
+      chart_frame = HeatMapView(self.notebook)
+    elif chart_type == 'CONTOUR_MAP':
+      chart_frame = ContourMapView(self.notebook)
+    chart_frame.load_view()
 
-    result_add = self.notebook.add(heatmap_frame, text=tab_name)
+    result_add = self.notebook.add(chart_frame, text=tab_name)
     new_tab_index = self.notebook.index('end') - 1
     self.notebook.select(new_tab_index)
 
@@ -228,7 +240,8 @@ class WorkspaceView(ttk.Frame):
     worksheets = prj_mgmt.get_worksheets(project_path)
     for worksheet in worksheets:
       tab_name = worksheet['name']
-      self.__add_tab(tab_name)
+      chart_type = worksheet['chart_type']
+      self.__add_tab(tab_name, chart_type)
 
   def __create_empty_project_frame(self):
     frame = ttk.Frame(self)

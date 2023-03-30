@@ -6,8 +6,10 @@ from utils.global_constants import ASSETS_DIR
 from PIL import ImageTk, Image
 
 class TabView(ttk.Frame):
-  def __init__(self, master):
+  def __init__(self, master, chart_type):
     super().__init__(master, bootstyle='default')
+    self.chart_type = chart_type
+
     self.__col1_arrow_btn = None
     self.__arrow_label = None
     self.__col2_params = None
@@ -65,8 +67,12 @@ class TabView(ttk.Frame):
     self.chart_and_btns_frame = ttk.Frame(self.__col3_chart)
     self.chart_and_btns_frame.pack(fill='both', expand=1)
 
-    image_path = pathlib.Path(ASSETS_DIR, 'images', 'heatmap-example.png')
-    self.chart_img = ImageTk.PhotoImage(Image.open(image_path))
+    example_chart_img_path = None
+    if self.chart_type == 'HEATMAP':
+      example_chart_img_path = pathlib.Path(ASSETS_DIR, 'images', 'heatmap-example.png')
+    elif self.chart_type == 'CONTOUR_MAP':
+      example_chart_img_path = pathlib.Path(ASSETS_DIR, 'images', 'contourmap-example.png')
+    self.chart_img = ImageTk.PhotoImage(Image.open(example_chart_img_path))
     self.chart_img_label = ttk.Label(self.chart_and_btns_frame, image=self.chart_img)
     self.chart_img_label.pack(pady=(10, 0))
     save_chart_btn = ttk.Button(

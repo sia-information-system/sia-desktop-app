@@ -11,7 +11,7 @@ from datetime import datetime
 
 class HeatMapView(TabView):
   def __init__(self, master):
-    super().__init__(master)
+    super().__init__(master, chart_type='HEATMAP')
     self.__build_method = None
     self.__static_build_method_frame = None
     self.__animated_build_method_frame = None

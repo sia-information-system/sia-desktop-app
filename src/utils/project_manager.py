@@ -110,7 +110,7 @@ def worksheet_exists(project_path, sheet_name):
   sheet_name = sheet_name.strip().lower()
   return sheet_name in [sheet['name'] for sheet in worksheets]
 
-def add_worksheet(project_path, sheet_name, sheet_chart):
+def add_worksheet(project_path, sheet_name, sheet_chart_type):
   # Find the project metadata (json file).
   project_metadata_path = get_project_metadata_file_path(project_path)
   with open(project_metadata_path) as json_file:
@@ -119,7 +119,7 @@ def add_worksheet(project_path, sheet_name, sheet_chart):
   # Add new sheet to worksheets list.
   sheet_data = {
     'name': sheet_name.strip().lower(),
-    'chart': sheet_chart,
+    'chart_type': sheet_chart_type,
     'parameters': {}
   }
   metadata['worksheets'].append(sheet_data)
