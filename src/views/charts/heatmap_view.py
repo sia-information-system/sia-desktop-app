@@ -1,13 +1,13 @@
+import pathlib
 import tkinter as tk
 import ttkbootstrap as ttk
+import utils.dataset_utils as dataset_utils
+import utils.global_variables as global_vars
 from ttkbootstrap.tooltip import ToolTip
 from views.templates.tab_view import TabView
-import utils.global_variables as global_vars
 from omdepplotlib.chart_building import level_chart
-import pathlib
 from PIL import ImageTk, Image
 from datetime import datetime
-import utils.dataset_utils as dataset_utils
 
 class HeatMapView(TabView):
   def __init__(self, master):
@@ -205,17 +205,20 @@ class HeatMapView(TabView):
     if not valid_fields:
       return
 
-    dataset = global_vars.current_project_dataset
-    self.chart_builder = level_chart.HeatMapBuilder(dataset=dataset)
-    if self.__build_method == 'static':
-      self.__generate_static_chart(variable, depth, chart_title, palette_colors,
-        target_date)
-    elif self.__build_method == 'animated':
-      self.__generate_animated_chart(variable, depth, chart_title, palette_colors,
-        duration_unit, duration, start_date, end_date)
+    try:
+      dataset = global_vars.current_project_dataset
+      self.chart_builder = level_chart.HeatMapBuilder(dataset=dataset)
+      if self.__build_method == 'static':
+        self.__generate_static_chart(variable, depth, chart_title, palette_colors,
+          target_date)
+      elif self.__build_method == 'animated':
+        self.__generate_animated_chart(variable, depth, chart_title, palette_colors,
+          duration_unit, duration, start_date, end_date)
 
-    self.__stop_and_hide_progress_bar()
-    self.chart_and_btns_frame.pack(fill='both', expand=1)
+      self.__stop_and_hide_progress_bar()
+      self.chart_and_btns_frame.pack(fill='both', expand=1)
+    except:
+      pass
 
   def __generate_static_chart(
     self,
@@ -272,18 +275,24 @@ class HeatMapView(TabView):
     duration_unit = self.duration_unit_dict[duration_unit]
     duration = int(duration) if duration_unit == 'FRAMES_PER_SECOND' else round(float(duration), 2)
 
-    self.chart_builder.build_animation(
-      var_name=variable,
-      title=chart_title,
-      var_label=self.plot_measure_label[variable],
-      dim_constraints=dim_constraints,
-      time_dim_name='time',
-      lat_dim_name='latitude',
-      lon_dim_name='longitude',
-      duration=duration,
-      duration_unit=duration_unit,
-      color_palette=palette_colors
-    )
+    try:
+      self.chart_builder.build_animation(
+        var_name=variable,
+        title=chart_title,
+        var_label=self.plot_measure_label[variable],
+        dim_constraints=dim_constraints,
+        time_dim_name='time',
+        lat_dim_name='latitude',
+        lon_dim_name='longitude',
+        duration=duration,
+        duration_unit=duration_unit,
+        color_palette=palette_colors
+      )
+    except:
+      message = 'Rango de fechas no válido. Revise la información del '
+      message += 'dataset respecto al rango de fechas y su resolución temporal.'
+      tk.messagebox.showerror(title='Error', message=message)
+      raise ValueError('Rango de fechas no válido')
 
     gif_buffer = self.chart_builder._chart.get_buffer()
     self.gif_images = self.get_gif_frames(gif_buffer)
@@ -364,14 +373,23 @@ class HeatMapView(TabView):
       if end_date == '' or end_date == None:
         empty_fields.append('Fecha final')
       try:
-        start_date = datetime.strptime(start_date, '%Y-%m-%d')
-        end_date = datetime.strptime(end_date, '%Y-%m-%d')
+        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
       except:
         message = 'Las fechas deben tener el formato "YYYY-MM-DD".'
         tk.messagebox.showerror(title='Error', message=message)
         return False
-      if start_date > end_date:
-        message = 'La fecha inicial debe ser menor o igual a la fecha final.'
+      if start_date >= end_date:
+        message = 'La fecha inicial debe ser menor a la fecha final.'
+        tk.messagebox.showerror(title='Error', message=message)
+        return False
+
+      dataset_date_values = dataset_utils.get_time_values()
+      min_dataset_date = dataset_date_values[0].date()
+      max_dataset_date = dataset_date_values[-1].date()
+      if end_date < min_dataset_date or start_date > max_dataset_date:
+        message = 'Las fechas deben estar dentro del rango de fechas del dataset. '
+        message += f'El rango de fechas del dataset va del {min_dataset_date} hasta el {max_dataset_date}.'
         tk.messagebox.showerror(title='Error', message=message)
         return False
 
