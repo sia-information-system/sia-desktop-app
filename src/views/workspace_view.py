@@ -10,6 +10,7 @@ from views.charts.heatmap_view import HeatMapView
 from views.charts.contour_map_view import ContourMapView
 from views.charts.single_point_time_series_view import SinglePointTimeSeriesView
 from views.charts.currents_views import CurrentsChartView
+from views.charts.wind_rose_view import WindRoseView
 
 # Docs for QueryDialog: https://ttkbootstrap.readthedocs.io/en/latest/api/dialogs/querydialog/
 class NewSheetDialogBox(QueryDialog):
@@ -222,6 +223,8 @@ class WorkspaceView(ttk.Frame):
       chart_frame = SinglePointTimeSeriesView(self.notebook)
     elif chart_type == 'CURRENTS_CHART':
       chart_frame = CurrentsChartView(self.notebook)
+    elif chart_type == 'WIND_ROSE':
+      chart_frame = WindRoseView(self.notebook)
     chart_frame.load_view()
 
     result_add = self.notebook.add(chart_frame, text=tab_name)

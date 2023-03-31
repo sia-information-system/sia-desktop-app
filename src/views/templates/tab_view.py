@@ -76,6 +76,8 @@ class TabView(ttk.Frame):
       example_chart_img_path = pathlib.Path(ASSETS_DIR, 'images', 'time-series-example.png')
     elif self.chart_type == 'CURRENTS_CHART':
       example_chart_img_path = pathlib.Path(ASSETS_DIR, 'images', 'currents-chart-example.png')
+    elif self.chart_type == 'WIND_ROSE':
+      example_chart_img_path = pathlib.Path(ASSETS_DIR, 'images', 'windrose-example.png')
     else:
       example_chart_img_path = pathlib.Path(ASSETS_DIR, 'images', 'heatmap-example.png')
 
@@ -115,7 +117,7 @@ class TabView(ttk.Frame):
     return [ImageTk.PhotoImage(frame) for frame in frames]
 
   def resize_chart_img(self, chart_img):
-    max_height = 500
+    max_height = 600
     original_width, original_height = chart_img.size
     new_width = int(original_width * max_height / original_height)
     return chart_img.resize((new_width, max_height), Image.ANTIALIAS)

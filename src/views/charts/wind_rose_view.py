@@ -1,4 +1,5 @@
 import pathlib
+import numpy as np
 import tkinter as tk
 import ttkbootstrap as ttk
 import utils.dataset_utils as dataset_utils
@@ -9,9 +10,9 @@ from views.templates.tab_view import TabView
 from omdepplotlib.chart_building import level_chart
 from PIL import ImageTk, Image
 
-class CurrentsChartView(TabView):
+class WindRoseView(TabView):
   def __init__(self, master):
-    super().__init__(master, chart_type='CURRENTS_CHART')
+    super().__init__(master, chart_type='WIND_ROSE')
     self.depth_list = dataset_utils.get_depth_values()
 
     self.__progress_bar = None
@@ -22,7 +23,7 @@ class CurrentsChartView(TabView):
 
     # ------------------ Elements of the view  ------------------
 
-    title_view_label = ttk.Label(self.col2_user_params_frame, text='Corrientes', font=('TkDefaultFont', 14))
+    title_view_label = ttk.Label(self.col2_user_params_frame, text='Rosa de los vientos', font=('TkDefaultFont', 14))
     title_view_label.pack(pady=10)
 
     # Form.
@@ -42,8 +43,24 @@ class CurrentsChartView(TabView):
     label_text = 'Fecha objetivo:'
     target_date_entry = self.__create_date_entry_row(form_entries_frame, label_text)
 
-    label_text = 'Densidad de la flecha:'
-    stride_entry = self.__create_entry_row(form_entries_frame, label_text)
+    label_text = 'Paleta de colores:'
+    palette_colors_list = ['OrRd', 'plasma', 'Greens', 'viridis']
+    palette_colors_cb = self.__create_combobox_row(form_entries_frame, label_text, palette_colors_list)
+
+    label_text = 'Longitud mínima:'
+    lon_min_entry = self.__create_entry_row(form_entries_frame, label_text)
+
+    label_text = 'Longitud máxima:'
+    lon_max_entry = self.__create_entry_row(form_entries_frame, label_text)
+
+    label_text = 'Latitud mínima:'
+    lat_min_entry = self.__create_entry_row(form_entries_frame, label_text)
+
+    label_text = 'Latitud máxima:'
+    lat_max_entry = self.__create_entry_row(form_entries_frame, label_text)
+
+    label_text = 'Cantidad de sectores:'
+    n_sectors_entry = self.__create_entry_row(form_entries_frame, label_text)
 
     # Apply button.
     connect_button = ttk.Button(
@@ -53,7 +70,10 @@ class CurrentsChartView(TabView):
         depth_cb.get(),
         chart_title_entry.get(),
         target_date_entry.entry.get(),
-        stride_entry.get()
+        palette_colors_cb.get(),
+        lon_min_entry.get(), lon_max_entry.get(),
+        lat_min_entry.get(), lat_max_entry.get(),
+        n_sectors_entry.get()
       )
     )
     connect_button.pack(pady=10)
@@ -130,26 +150,36 @@ class CurrentsChartView(TabView):
     depth,
     chart_title,
     target_date,
-    stride
+    palette_colors,
+    lon_min, lon_max,
+    lat_min, lat_max,
+    n_sectors
   ):
     print('-----------------------------')
     print(f'depth: "{depth}"')
     print(f'chart_title: "{chart_title}"')
     print(f'target_date: "{target_date}"')
-    print(f'stride: "{stride}"')
+    print(f'palette_colors: "{palette_colors}"')
+    print(f'lon_min: "{lon_min}"')
+    print(f'lon_max: "{lon_max}"')
+    print(f'lat_min: "{lat_min}"')
+    print(f'lat_max: "{lat_max}"')
+    print(f'n_sectors: "{n_sectors}"')
 
     self.__show_and_run_progress_bar()
     self.chart_and_btns_frame.pack_forget()
 
-    valid_fields = self.__fields_validation(depth, chart_title, target_date, stride)
+    valid_fields = self.__fields_validation(depth, chart_title, target_date, palette_colors,
+      lon_min, lon_max, lat_min, lat_max, n_sectors)
     if not valid_fields:
       return
 
     try:
       dataset = global_vars.current_project_dataset 
-      self.chart_builder = level_chart.ArrowChartBuilder(dataset=dataset)
+      self.chart_builder = level_chart.WindRoseBuilder(dataset=dataset)
 
-      self.__generate_static_chart(depth, chart_title, target_date, stride)
+      self.__generate_static_chart(depth, chart_title, target_date, palette_colors, 
+        lon_min, lon_max, lat_min, lat_max, n_sectors)
 
       self.__stop_and_hide_progress_bar()
       self.chart_and_btns_frame.pack(fill='both', expand=1)
@@ -162,22 +192,33 @@ class CurrentsChartView(TabView):
     depth,
     chart_title,
     target_date,
-    stride
-  ):    
+    palette_colors,
+    lon_min, lon_max,
+    lat_min, lat_max,
+    n_sectors
+  ):
+    lon_min, lon_max = int(lon_min), int(lon_max)
+    lat_min, lat_max = int(lat_min), int(lat_max)
+
     dim_constraints = {
       'time': [target_date],
       'depth': depth,
+      'longitude': slice(lon_min, lon_max),
+      'latitude': slice(lat_min, lat_max),
     }
 
-    print(f'-> Static Arror chart image.')
+    # min, max, jumps
+    bin_range = np.arange(0, 1, .2) # Si falla, reduce el primer valor. # FIXME: 
+
+    print(f'-> Wind rose chart image.')
     self.chart_builder.build_static(
-      var_ew = 'uo', # TODO: Solicitar al usuario.
-      var_nw = 'vo', # TODO: Solicitar al usuario.
-      var_lon = 'longitude', # TODO: Solicitar al usuario.
-      var_lat = 'latitude', # TODO: Solicitar al usuario.
+      var_ew = 'uo',
+      var_nw = 'vo',
       title = chart_title,
+      color_palette = palette_colors,
       dim_constraints= dim_constraints,
-      stride = int(stride)
+      bin_range = bin_range,
+      nsector = int(n_sectors)
     )
 
     img_buffer = self.chart_builder._chart.get_buffer()
@@ -193,7 +234,10 @@ class CurrentsChartView(TabView):
     depth, 
     chart_title,
     target_date,
-    stride
+    palette_colors,
+    lon_min, lon_max,
+    lat_min, lat_max,
+    n_sectors
   ):
     chart_title = chart_title.strip()
     
@@ -201,7 +245,12 @@ class CurrentsChartView(TabView):
     if chart_title == '': empty_fields.append('Título del gráfico')
     if depth == '': empty_fields.append('Profundidad')
     if target_date == '': empty_fields.append('Fecha objetivo')
-    if stride == '': empty_fields.append('Stride')
+    if palette_colors == '': empty_fields.append('Paleta de colores')
+    if lon_min == '': empty_fields.append('Longitud mínima')
+    if lon_max == '': empty_fields.append('Longitud máxima')
+    if lat_min == '': empty_fields.append('Latitud mínima')
+    if lat_max == '': empty_fields.append('Latitud máxima')
+    if n_sectors == '': empty_fields.append('Número de sectores')
 
     if len(empty_fields) > 0:
       message = 'Todos los campos son obligatorios. Datos faltantes: \n'
@@ -209,19 +258,50 @@ class CurrentsChartView(TabView):
       tk.messagebox.showerror(title='Error', message=message)
       return False
 
+    # Validate target date format.
     try:
-      stride = int(stride)
-      if stride <= 0:
-        raise Exception()
+      print(f'target_date: {target_date}')
+      target_date = datetime.strptime(target_date, '%Y-%m-%d')
+      print('se ejecuto el try')
     except:
-      message = 'Stride debe ser un número entero positivo.'
+      message = 'La fecha objetivo debe tener el formato "YYYY-MM-DD".'
       tk.messagebox.showerror(title='Error', message=message)
       return False
 
+    # Validate longitute and latitude range.
     try:
-      target_date = datetime.strptime(target_date, '%Y-%m-%d')
+      lon_min, lon_max = int(lon_min), int(lon_max)
+      lat_min, lat_max = int(lat_min), int(lat_max)
+
+      if lon_min >= lon_max or lat_min >= lat_max:
+        message = 'La longitud o latitud minima debe ser menor a su valor máximo.'
+        tk.messagebox.showerror(title='Error', message=message)
+        return False
+
+      dataset_lon_values = dataset_utils.get_longitude_values()
+      min_dataset_lon, max_dataset_lon = min(dataset_lon_values), max(dataset_lon_values)
+      dataset_lat_values = dataset_utils.get_latitude_values()
+      min_dataset_lat, max_dataset_lat = min(dataset_lat_values), max(dataset_lat_values)
+
+      if lon_max < min_dataset_lon or lon_min > max_dataset_lon or \
+        lat_max < min_dataset_lat or lat_min > max_dataset_lat:
+        message = 'La longitud y latitud deben estar dentro del rango del dataset.\n'
+        message += f'Rango de longitud: {min_dataset_lon}° a {max_dataset_lon}°.\n'
+        message += f'Rango de latitud: {min_dataset_lat}° a {max_dataset_lat}°.'
+        tk.messagebox.showerror(title='Error', message=message)
+        return False
     except:
-      message = 'La fecha objetivo debe tener el formato "YYYY-MM-DD".'
+      message = 'La longitud y la latitud deben ser números flotantes.'
+      tk.messagebox.showerror(title='Error', message=message)
+      return False
+
+    # Validate number of sectors.
+    try:
+      n_sectors = int(n_sectors)
+      if n_sectors < 1:
+        raise Exception()
+    except:
+      message = 'El número de sectores debe ser un número entero positivo.'
       tk.messagebox.showerror(title='Error', message=message)
       return False
 
