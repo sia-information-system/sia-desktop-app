@@ -74,11 +74,17 @@ class TabView(ttk.Frame):
       example_chart_img_path = pathlib.Path(ASSETS_DIR, 'images', 'contourmap-example.png')
     elif self.chart_type == 'TIME_SERIES':
       example_chart_img_path = pathlib.Path(ASSETS_DIR, 'images', 'time-series-example.png')
+    elif self.chart_type == 'CURRENTS_CHART':
+      example_chart_img_path = pathlib.Path(ASSETS_DIR, 'images', 'currents-chart-example.png')
     else:
       example_chart_img_path = pathlib.Path(ASSETS_DIR, 'images', 'heatmap-example.png')
-    self.chart_img = ImageTk.PhotoImage(Image.open(example_chart_img_path))
+
+    img = Image.open(example_chart_img_path)
+    img_resized = self.resize_chart_img(img)
+    self.chart_img = ImageTk.PhotoImage(img_resized)
     self.chart_img_label = ttk.Label(self.chart_and_btns_frame, image=self.chart_img)
     self.chart_img_label.pack(pady=(10, 0))
+
     save_chart_btn = ttk.Button(
       self.chart_and_btns_frame, 
       text='Guardar gráfico', 
@@ -108,6 +114,12 @@ class TabView(ttk.Frame):
     # Convert PIL Image objects to PhotoImage objects
     return [ImageTk.PhotoImage(frame) for frame in frames]
 
+  def resize_chart_img(self, chart_img):
+    max_height = 500
+    original_width, original_height = chart_img.size
+    new_width = int(original_width * max_height / original_height)
+    return chart_img.resize((new_width, max_height), Image.ANTIALIAS)
+
   def __toggle_column(self, event):
     if self.__col2_params.winfo_ismapped():
       self.__col2_params.grid_remove()
@@ -135,6 +147,10 @@ class TabView(ttk.Frame):
     self.after(self.gif_frame_duration_ms, self.__play_gif)
 
   def __save_chart(self):
+    # Avoid save examples charts.
+    if not self.chart_builder:
+      return
+
     file_path = tk.filedialog.asksaveasfilename(defaultextension='.png', filetypes=[('Archivos PNG', '*.png'), ('Archivos GIF', '*.gif')])
     if not file_path:
       return
