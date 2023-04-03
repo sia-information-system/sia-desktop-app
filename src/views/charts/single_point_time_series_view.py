@@ -3,7 +3,7 @@ import tkinter as tk
 import ttkbootstrap as ttk
 import utils.dataset_utils as dataset_utils
 import utils.global_variables as global_vars
-from ttkbootstrap.tooltip import ToolTip
+import utils.basic_form_fields as form_fields
 from views.templates.tab_view import TabView
 from omdepplotlib.chart_building import line_chart
 from PIL import ImageTk, Image
@@ -36,35 +36,35 @@ class SinglePointTimeSeriesView(TabView):
 
     # Form.
     form_frame = ttk.Frame(self.col2_user_params_frame, bootstyle='default')
-    form_frame.pack(fill='x', padx=30, pady=10)
+    form_frame.pack(fill='x', padx=20, pady=10)
 
     form_entries_frame = ttk.Frame(form_frame)
     form_entries_frame.pack(fill='x')
 
     label_text = 'Variable:'
-    variable_cb = self.__create_combobox_row(form_entries_frame, label_text, self.variable_list)
+    variable_cb = form_fields.create_combobox_row(form_entries_frame, label_text, self.variable_list)
 
     label_text = 'Profundidad(es) [m]:'
     default_depth = self.depth_list[0]
-    depth1_cb = self.__create_combobox_row(form_entries_frame, label_text, self.depth_list, default_depth)
-    depth2_cb = self.__create_combobox_row(form_entries_frame, ' ', self.depth_list, readonly=False)
-    depth3_cb = self.__create_combobox_row(form_entries_frame, ' ', self.depth_list, readonly=False)
-    depth4_cb = self.__create_combobox_row(form_entries_frame, ' ', self.depth_list, readonly=False)
-    depth5_cb = self.__create_combobox_row(form_entries_frame, ' ', self.depth_list, readonly=False)
+    depth1_cb = form_fields.create_combobox_row(form_entries_frame, label_text, self.depth_list, default_option=default_depth)
+    depth2_cb = form_fields.create_combobox_row(form_entries_frame, ' ', self.depth_list, readonly=False)
+    depth3_cb = form_fields.create_combobox_row(form_entries_frame, ' ', self.depth_list, readonly=False)
+    depth4_cb = form_fields.create_combobox_row(form_entries_frame, ' ', self.depth_list, readonly=False)
+    depth5_cb = form_fields.create_combobox_row(form_entries_frame, ' ', self.depth_list, readonly=False)
 
     label_text = 'Título del gráfico:'
-    chart_title_entry = self.__create_entry_row(form_entries_frame, label_text)
+    chart_title_entry = form_fields.create_entry_row(form_entries_frame, label_text)
 
     label_text = 'Longitud:'
-    longitude_entry = self.__create_entry_row(form_entries_frame, label_text)
+    longitude_entry = form_fields.create_entry_row(form_entries_frame, label_text)
 
     label_text = 'Latitud: '
-    latitude_entry = self.__create_entry_row(form_entries_frame, label_text)
+    latitude_entry = form_fields.create_entry_row(form_entries_frame, label_text)
 
     label_text = 'Fecha de inicio:'
-    start_date_entry = self.__create_date_entry_row(form_entries_frame, label_text)
+    start_date_entry = form_fields.create_date_entry_row(form_entries_frame, label_text)
     label_text = 'Fecha de fin:'
-    end_date_entry = self.__create_date_entry_row(form_entries_frame, label_text)
+    end_date_entry = form_fields.create_date_entry_row(form_entries_frame, label_text)
 
 
     # Apply button.
@@ -89,63 +89,6 @@ class SinglePointTimeSeriesView(TabView):
       bootstyle='success striped'
     )
     self.__show_and_run_progress_bar()
-
-  def __create_combobox_row(self, master, label_text, options, default_option=None, readonly=True):
-    row_frame = ttk.Frame(master, bootstyle='default')
-    row_frame.pack(fill='x', pady=5)
-
-    label_frame = ttk.Frame(row_frame)
-    label_frame.pack(fill='x', side='left')
-    title_label = ttk.Label(label_frame, text=label_text, width=25)
-    title_label.pack(fill='x')
-
-    combobox_frame = ttk.Frame(row_frame)
-    combobox_frame.pack(fill='x', side='right', expand=1)
-    state = 'readonly' if readonly else 'normal'
-    combobox = ttk.Combobox(combobox_frame, values=options, state=state, width=35)
-    if default_option != None:
-      combobox.set(default_option)
-    combobox.pack(fill='x')
-
-    return combobox
-
-  def __create_entry_row(self, master, label_text):
-    row_frame = ttk.Frame(master, bootstyle='default')
-    row_frame.pack(fill='x', pady=5)
-
-    label_frame = ttk.Frame(row_frame)
-    label_frame.pack(fill='x', side='left')
-    title_label = ttk.Label(label_frame, text=label_text, width=25)
-    title_label.pack(fill='x')
-
-    entry_frame = ttk.Frame(row_frame)
-    entry_frame.pack(fill='x', side='right', expand=1)
-    entry = ttk.Entry(entry_frame, width=35)
-    entry.pack(fill='x')
-
-    return entry
-
-  def __create_date_entry_row(self, master, label_text):
-    row_frame = ttk.Frame(master, bootstyle='default')
-    row_frame.pack(fill='x', pady=5)
-
-    label_frame = ttk.Frame(row_frame)
-    label_frame.pack(fill='x', side='left')
-    title_label = ttk.Label(label_frame, text=label_text, width=25)
-    title_label.pack(fill='x')
-
-    date_entry_frame = ttk.Frame(row_frame)
-    date_entry_frame.pack(side='left')
-    date_entry = ttk.DateEntry(date_entry_frame, dateformat='%Y-%m-%d')
-    date_entry.pack()
-
-    tooltip_label = ttk.Label(row_frame, text='Info')
-    tooltip_label.pack(side='left', padx=10)
-    text_info = 'Clic izquierdo en la flecha para mover el calendario un mes.\n'
-    text_info += 'Clic derecho en la flecha para mover el calendario un año.'
-    ToolTip(tooltip_label, text=text_info, bootstyle='info-inverse')
-
-    return date_entry
 
   def __start_creation_chart(
     self,

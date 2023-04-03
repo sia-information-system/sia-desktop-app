@@ -8,11 +8,13 @@ from pathlib import Path
 from datetime import datetime
 from PIL import ImageTk, Image
 from utils.global_constants import HOME_DATASETS_DIR, ASSETS_DIR
+import utils.basic_form_fields as form_fields
+from views.templates.scrollable_view import ScrollableView
 from siaextractlib.utils.log import LogStream
 from siaextractlib.utils.auth import SimpleAuth
 from siaextractlib.extractors import OpendapExtractor
 
-class DataExtractorView(ttk.Frame):
+class DataExtractorView(ScrollableView):
   def __init__(self, master):
     super().__init__(master)
     self.data_sources = ['Copernicus', 'HYCOM']
@@ -21,8 +23,12 @@ class DataExtractorView(ttk.Frame):
 
   def load_view(self):
     self.pack(fill='both', expand=1)
+    super().load_view()
 
-    columns_frame = ttk.Frame(self)
+    title_view_label = ttk.Label(self.scroll_frame, text='Descarga de datos', font=('TkDefaultFont', 14))
+    title_view_label.pack(pady=10)
+
+    columns_frame = ttk.Frame(self.scroll_frame)
     columns_frame.pack()
 
     # Column 1
@@ -30,47 +36,48 @@ class DataExtractorView(ttk.Frame):
     form_frame = ttk.Frame(columns_frame)
     form_frame.grid(row=0, column=0, padx=20, pady=10, sticky='nsew')
 
-    title_view_label = ttk.Label(form_frame, text='Descarga de datos', font=('TkDefaultFont', 14))
-    title_view_label.pack(pady=10)
+    title_form_label = ttk.Label(form_frame, text='Parámetros', font=('TkDefaultFont', 14))
+    title_form_label.pack(pady=10)
 
     label_text = 'Selecciona la fuente de datos:'
-    data_source_cb = self.__create_combobox_row(form_frame, label_text, self.data_sources, default_option=self.data_sources[0])
+    data_source_cb = form_fields.create_combobox_row(form_frame, label_text, self.data_sources, 
+      default_option=self.data_sources[0], label_width=30, entry_width=35)
 
     label = 'Nombre de usuario:' 
-    username_entry = self.__create_entry_row(form_frame, label)
+    username_entry = form_fields.create_entry_row(form_frame, label, label_width=30, entry_width=35)
 
     label = 'Contraseña:' 
-    password_entry = self.__create_entry_row(form_frame, label, show='*')
+    password_entry = form_fields.create_entry_row(form_frame, label, label_width=30, entry_width=35, show='*')
 
     label = 'Enlace de OPeNDAP:'
-    opendap_link_entry = self.__create_entry_row(form_frame, label)
+    opendap_link_entry = form_fields.create_entry_row(form_frame, label, label_width=30, entry_width=35)
 
     label = 'Longitud mínima:'
-    lon_min_entry = self.__create_entry_row(form_frame, label)
+    lon_min_entry = form_fields.create_entry_row(form_frame, label, label_width=30, entry_width=35)
 
     label = 'Longitud máxima:'
-    lon_max_entry = self.__create_entry_row(form_frame, label)
+    lon_max_entry = form_fields.create_entry_row(form_frame, label, label_width=30, entry_width=35)
 
     label = 'Latitud mínima:'
-    lat_min_entry = self.__create_entry_row(form_frame, label)
+    lat_min_entry = form_fields.create_entry_row(form_frame, label, label_width=30, entry_width=35)
 
     label = 'Latitud máxima:'
-    lat_max_entry = self.__create_entry_row(form_frame, label)
+    lat_max_entry = form_fields.create_entry_row(form_frame, label, label_width=30, entry_width=35)
 
     label = 'Profundidad mínima:'
-    depth_min_entry = self.__create_entry_row(form_frame, label)
+    depth_min_entry = form_fields.create_entry_row(form_frame, label, label_width=30, entry_width=35)
 
     label = 'Profundidad máxima:'
-    depth_max_entry = self.__create_entry_row(form_frame, label)
+    depth_max_entry = form_fields.create_entry_row(form_frame, label, label_width=30, entry_width=35)
 
     label = 'Fecha de inicio:'
-    start_date_entry = self.__create_date_entry_row(form_frame, label)
+    start_date_entry = form_fields.create_date_entry_row(form_frame, label, label_width=30)
 
     label = 'Fecha de fin:'
-    end_date_entry = self.__create_date_entry_row(form_frame, label)
+    end_date_entry = form_fields.create_date_entry_row(form_frame, label, label_width=30)
 
     label = 'Variables:'
-    variables_entry = self.__create_entry_row(form_frame, label)
+    variables_entry = form_fields.create_entry_row(form_frame, label, label_width=30, entry_width=35)
 
     # TODO: Remove default values. This is only for testing purposes.
     username_entry.insert(0, 'amontejo')
@@ -233,60 +240,3 @@ class DataExtractorView(ttk.Frame):
       return False
 
     return True
-
-  def __create_entry_row(self, master, label_text, show=None):
-    row_frame = ttk.Frame(master, bootstyle='default')
-    row_frame.pack(fill='x', pady=5)
-
-    label_frame = ttk.Frame(row_frame)
-    label_frame.pack(fill='x', side='left')
-    title_label = ttk.Label(label_frame, text=label_text, width=30)
-    title_label.pack(fill='x')
-
-    entry_frame = ttk.Frame(row_frame)
-    entry_frame.pack(fill='x', side='right', expand=1)
-    entry = ttk.Entry(entry_frame, width=35, show=show)
-    entry.pack(fill='x')
-
-    return entry
-
-  def __create_combobox_row(self, master, label_text, options, default_option=None, readonly=True):
-    row_frame = ttk.Frame(master, bootstyle='default')
-    row_frame.pack(fill='x', pady=5)
-
-    label_frame = ttk.Frame(row_frame)
-    label_frame.pack(fill='x', side='left')
-    title_label = ttk.Label(label_frame, text=label_text, width=30)
-    title_label.pack(fill='x')
-
-    combobox_frame = ttk.Frame(row_frame)
-    combobox_frame.pack(fill='x', side='right', expand=1)
-    state = 'readonly' if readonly else 'normal'
-    combobox = ttk.Combobox(combobox_frame, values=options, state=state, width=35)
-    if default_option != None:
-      combobox.set(default_option)
-    combobox.pack(fill='x')
-
-    return combobox
-
-  def __create_date_entry_row(self, master, label_text):
-    row_frame = ttk.Frame(master, bootstyle='default')
-    row_frame.pack(fill='x', pady=5)
-
-    label_frame = ttk.Frame(row_frame)
-    label_frame.pack(fill='x', side='left')
-    title_label = ttk.Label(label_frame, text=label_text, width=30)
-    title_label.pack(fill='x')
-
-    date_entry_frame = ttk.Frame(row_frame)
-    date_entry_frame.pack(side='left')
-    date_entry = ttk.DateEntry(date_entry_frame, dateformat='%Y-%m-%d')
-    date_entry.pack()
-
-    tooltip_label = ttk.Label(row_frame, text='Info')
-    tooltip_label.pack(side='left', padx=10)
-    text_info = 'Clic izquierdo en la flecha para mover el calendario un mes.\n'
-    text_info += 'Clic derecho en la flecha para mover el calendario un año.'
-    ToolTip(tooltip_label, text=text_info, bootstyle='info-inverse')
-
-    return date_entry

@@ -43,11 +43,11 @@ class TabView(ttk.Frame):
     self.__arrow_label.bind('<Button-1>', self.__toggle_column)
 
     # Column 2
-    self.__col2_params = ttk.Frame(self, bootstyle='default') # TODO: Delete bootstyle after testing. info
+    self.__col2_params = ScrolledFrame(self, bootstyle='default', width=500) # TODO: Delete bootstyle after testing. info
     self.__col2_params.grid(row=0, column=1, sticky='nsew')
 
     params_notebook = ttk.Notebook(self.__col2_params, bootstyle='dark')
-    params_notebook.pack(fill='both', expand=1, pady=10)
+    params_notebook.pack(fill='both', expand=1, padx=(0, 20), pady=10) # Different padx because of the scrollbar
 
     self.col2_user_params_frame = ttk.Frame(params_notebook)
     params_notebook.add(self.col2_user_params_frame, text='Parametros')
@@ -58,7 +58,7 @@ class TabView(ttk.Frame):
     title_label.pack(pady=20)
 
     # Column 3
-    self.__col3_chart = ttk.Frame(self, bootstyle='default') # TODO: Delete bootstyle after testing. success
+    self.__col3_chart = ScrolledFrame(self, bootstyle='default') # TODO: Delete bootstyle after testing. success
     self.__col3_chart.grid(row=0, column=2, sticky='nsew')
 
     col3_chart_title = ttk.Label(self.__col3_chart, text='Gráfica', font=('TkDefaultFont', 14))
@@ -117,7 +117,7 @@ class TabView(ttk.Frame):
     return [ImageTk.PhotoImage(frame) for frame in frames]
 
   def resize_chart_img(self, chart_img):
-    max_height = 600
+    max_height = 600 # TODO: Tamaño adecudo creo que 500
     original_width, original_height = chart_img.size
     new_width = int(original_width * max_height / original_height)
     return chart_img.resize((new_width, max_height), Image.ANTIALIAS)
