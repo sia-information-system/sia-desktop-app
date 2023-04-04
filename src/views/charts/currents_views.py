@@ -140,11 +140,12 @@ class CurrentsChartView(TabView):
   ):
     chart_title = chart_title.strip()
     
+    # Empty fields validation.
     empty_fields = []
     if chart_title == '': empty_fields.append('Título del gráfico')
     if depth == '': empty_fields.append('Profundidad')
     if target_date == '': empty_fields.append('Fecha objetivo')
-    if stride == '': empty_fields.append('Stride')
+    if stride == '': empty_fields.append('Densidad de la flecha')
 
     if len(empty_fields) > 0:
       message = 'Todos los campos son obligatorios. Datos faltantes: \n'
@@ -152,15 +153,17 @@ class CurrentsChartView(TabView):
       tk.messagebox.showerror(title='Error', message=message)
       return False
 
+    # Validate stride type and limits.
     try:
       stride = int(stride)
       if stride <= 0:
         raise Exception()
     except:
-      message = 'Stride debe ser un número entero positivo.'
+      message = 'Densidad de la flecha debe ser un número entero positivo.'
       tk.messagebox.showerror(title='Error', message=message)
       return False
 
+    # Validate target date format.
     try:
       target_date = datetime.strptime(target_date, '%Y-%m-%d')
     except:

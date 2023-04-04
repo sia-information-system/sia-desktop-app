@@ -182,7 +182,7 @@ class WorkspaceView(ttk.Frame):
     # Buttons.
 
     buttons_frame = ttk.Frame(self)
-    buttons_frame.pack(pady=10)
+    buttons_frame.pack(pady=15)
 
     new_sheet_window = NewSheetDialogBox(prompt='Datos de la hoja de trabajo', parent=self)
     add_tab_button = ttk.Button(
@@ -192,7 +192,7 @@ class WorkspaceView(ttk.Frame):
       bootstyle='default',
       width=30
     )
-    add_tab_button.pack(pady=10, padx=(0, 10), side='left')
+    add_tab_button.pack(padx=(0, 10), side='left')
 
     remove_tab_button = ttk.Button(
       buttons_frame, 
@@ -201,7 +201,7 @@ class WorkspaceView(ttk.Frame):
       bootstyle='danger',
       width=30
     )
-    remove_tab_button.pack(pady=10, padx=(10, 0), side='left')
+    remove_tab_button.pack(padx=(10, 0), side='left')
 
   def __show_new_sheet_dialog(self, new_sheet_window):
     new_sheet_window.show()

@@ -116,9 +116,6 @@ class ContourMapView(TabView):
     )
     self.__show_and_run_progress_bar()
 
-    # TODO: Display image in scroll_frame (hide by default?).
-    # TODO: Display info about dataset in scroll_frame (hide by default).
-
   def __start_creation_chart(
     self,
     build_method,
@@ -189,7 +186,7 @@ class ContourMapView(TabView):
     print(f'-> ContourMap static image for "{variable}" variable.')
     self.chart_builder.build_static(
       var_name=variable,
-      title=chart_title,
+      title=chart_title.strip(),
       var_label=self.plot_measure_label[variable],
       dim_constraints=dim_constraints,
       lat_dim_name='latitude', # TODO: Revisar si el usuario tendre que ingresar esto.
@@ -230,7 +227,7 @@ class ContourMapView(TabView):
     try:
       self.chart_builder.build_animation(
         var_name=variable,
-        title=chart_title,
+        title=chart_title.strip(),
         var_label=self.plot_measure_label[variable],
         dim_constraints=dim_constraints,
         time_dim_name='time',
@@ -277,6 +274,7 @@ class ContourMapView(TabView):
   ):
     chart_title = chart_title.strip()
     
+    # Empty fields validation.
     empty_fields = []
     if build_method == '': empty_fields.append('Método de construcción')
     if variable == '': empty_fields.append('Variable')
@@ -284,7 +282,27 @@ class ContourMapView(TabView):
     if chart_title == '': empty_fields.append('Título del gráfico')
     if palette_colors == '': empty_fields.append('Paleta de colores')
     if n_curves == '': empty_fields.append('Cantidad de curvas')
+    if self.__build_method == 'static':
+      if target_date == '' or target_date == None:
+        empty_fields.append('Fecha de objetivo')
+    elif self.__build_method == 'animated':
+      if duration_unit == '' or duration_unit == None:
+        empty_fields.append('Unidad de duración')
+      duration = duration.strip()
+      if duration == '' or duration == None:
+        empty_fields.append('Duración')
+      if start_date == '' or start_date == None:
+        empty_fields.append('Fecha inicial')
+      if end_date == '' or end_date == None:
+        empty_fields.append('Fecha final')
 
+    if len(empty_fields) > 0:
+      message = 'Todos los campos son obligatorios. Datos faltantes: \n'
+      message += ', '.join(empty_fields)
+      tk.messagebox.showerror(title='Error', message=message)
+      return False
+
+    # Validate quantity of curves limits.
     try:
       n_curves = int(n_curves)
       if n_curves <= 1:
@@ -295,8 +313,7 @@ class ContourMapView(TabView):
       return False
 
     if self.__build_method == 'static':
-      if target_date == '' or target_date == None:
-        empty_fields.append('Fecha de objetivo')
+      # Validate target date format.
       try:
         target_date = datetime.strptime(target_date, '%Y-%m-%d')
       except:
@@ -304,38 +321,29 @@ class ContourMapView(TabView):
         tk.messagebox.showerror(title='Error', message=message)
         return False
     elif self.__build_method == 'animated':
-      if duration_unit == '' or duration_unit == None:
-        empty_fields.append('Unidad de duración')
+      # Validate duration value limits.
+      if self.duration_unit_dict[duration_unit] == 'FRAMES_PER_SECOND':
+        try:
+          duration = int(duration)
+          if duration <= 0 or duration > 24:
+            raise Exception
+        except:
+          message = 'La duración debe ser un número entero entre 1 y 24, '
+          message += f'cuando la unidad de duración es "{duration_unit}".'
+          tk.messagebox.showerror(title='Error', message=message)
+          return False
+      elif self.duration_unit_dict[duration_unit] == 'SECONDS_PER_FRAME':
+        try:
+          duration = round(float(duration), 2)
+          if duration <= 0 or duration > 10:
+            raise Exception
+        except:
+          message = 'La duración debe ser un número flotante mayor a 0 y menor o igual a 10, '
+          message += f'cuando la unidad de duración es "{duration_unit}".'
+          tk.messagebox.showerror(title='Error', message=message)
+          return False
 
-      duration = duration.strip()
-      if duration == '' or duration == None:
-        empty_fields.append('Duración')
-      else:
-        if self.duration_unit_dict[duration_unit] == 'FRAMES_PER_SECOND':
-          try:
-            duration = int(duration)
-            if duration <= 0 or duration > 24:
-              raise Exception
-          except:
-            message = 'La duración debe ser un número entero entre 1 y 24, '
-            message += f'cuando la unidad de duración es "{duration_unit}".'
-            tk.messagebox.showerror(title='Error', message=message)
-            return False
-        elif self.duration_unit_dict[duration_unit] == 'SECONDS_PER_FRAME':
-          try:
-            duration = round(float(duration), 2)
-            if duration <= 0 or duration > 10:
-              raise Exception
-          except:
-            message = 'La duración debe ser un número flotante mayor a 0 y menor o igual a 10, '
-            message += f'cuando la unidad de duración es "{duration_unit}".'
-            tk.messagebox.showerror(title='Error', message=message)
-            return False
-
-      if start_date == '' or start_date == None:
-        empty_fields.append('Fecha inicial')
-      if end_date == '' or end_date == None:
-        empty_fields.append('Fecha final')
+      # Validate start and end dates format.
       try:
         start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
         end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
@@ -343,11 +351,14 @@ class ContourMapView(TabView):
         message = 'Las fechas deben tener el formato "YYYY-MM-DD".'
         tk.messagebox.showerror(title='Error', message=message)
         return False
+
+      # Validate start and end dates order.
       if start_date >= end_date:
         message = 'La fecha inicial debe ser menor a la fecha final.'
         tk.messagebox.showerror(title='Error', message=message)
         return False
 
+      # Validate start and end dates range.
       dataset_date_values = dataset_utils.get_time_values()
       min_dataset_date = dataset_date_values[0].date()
       max_dataset_date = dataset_date_values[-1].date()
@@ -356,12 +367,6 @@ class ContourMapView(TabView):
         message += f'El rango de fechas del dataset va del {min_dataset_date} hasta el {max_dataset_date}.'
         tk.messagebox.showerror(title='Error', message=message)
         return False
-
-    if len(empty_fields) > 0:
-      message = 'Todos los campos son obligatorios. Datos faltantes: \n'
-      message += ', '.join(empty_fields)
-      tk.messagebox.showerror(title='Error', message=message)
-      return False
 
     return True
 

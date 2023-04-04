@@ -157,7 +157,7 @@ class WindRoseView(TabView):
     self.chart_builder.build_static(
       var_ew = 'uo',
       var_nw = 'vo',
-      title = chart_title,
+      title = chart_title.strip(),
       color_palette = palette_colors,
       dim_constraints= dim_constraints,
       bin_range = bin_range,
@@ -184,6 +184,7 @@ class WindRoseView(TabView):
   ):
     chart_title = chart_title.strip()
     
+    # Empty fields validation.
     empty_fields = []
     if chart_title == '': empty_fields.append('Título del gráfico')
     if depth == '': empty_fields.append('Profundidad')
@@ -203,15 +204,13 @@ class WindRoseView(TabView):
 
     # Validate target date format.
     try:
-      print(f'target_date: {target_date}')
       target_date = datetime.strptime(target_date, '%Y-%m-%d')
-      print('se ejecuto el try')
     except:
       message = 'La fecha objetivo debe tener el formato "YYYY-MM-DD".'
       tk.messagebox.showerror(title='Error', message=message)
       return False
 
-    # Validate longitute and latitude range.
+    # Validate minimun and maximum longitute and latitude range.
     try:
       lon_min, lon_max = int(lon_min), int(lon_max)
       lat_min, lat_max = int(lat_min), int(lat_max)

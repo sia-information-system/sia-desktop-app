@@ -159,7 +159,7 @@ class SinglePointTimeSeriesView(TabView):
     print(f'-> Static Time series image for "{variable}" variable.')
     self.chart_builder.build_static(
       var_name=variable,
-      title=chart_title,
+      title=chart_title.strip(),
       var_label=self.plot_measure_label[variable],
       dim_constraints=dim_constraints,
       lat_dim_name='latitude', # TODO: Solicitar al usuario.
@@ -176,7 +176,6 @@ class SinglePointTimeSeriesView(TabView):
     # Hide button to play gif.
     self.play_chart_btn.pack_forget()
 
-  # TODO: Validar depths
   def __fields_validation(
     self, 
     variable, 
@@ -189,12 +188,22 @@ class SinglePointTimeSeriesView(TabView):
   ):
     chart_title = chart_title.strip()
     
+    # Empty fields validation.
     empty_fields = []
     if variable == '': empty_fields.append('Variable')
     if chart_title == '': empty_fields.append('Título del gráfico')
     if longitude == '': empty_fields.append('Longitud')
     if latitude == '': empty_fields.append('Latitud')
+    if start_date == '': empty_fields.append('Fecha inicial')
+    if end_date == '': empty_fields.append('Fecha final')
 
+    if len(empty_fields) > 0:
+      message = 'Todos los campos son obligatorios. Datos faltantes: \n'
+      message += ', '.join(empty_fields)
+      tk.messagebox.showerror(title='Error', message=message)
+      return False
+
+    # Validate longitude and latitude type and range.
     try:
       point_lon = float(longitude)
       point_lat = float(latitude)
@@ -215,10 +224,7 @@ class SinglePointTimeSeriesView(TabView):
       tk.messagebox.showerror(title='Error', message=message)
       return False
 
-    if start_date == '' or start_date == None:
-      empty_fields.append('Fecha inicial')
-    if end_date == '' or end_date == None:
-      empty_fields.append('Fecha final')
+    # Validate start and end dates format.
     try:
       start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
       end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
@@ -226,23 +232,20 @@ class SinglePointTimeSeriesView(TabView):
       message = 'Las fechas deben tener el formato "YYYY-MM-DD".'
       tk.messagebox.showerror(title='Error', message=message)
       return False
+
+    # Validate start and end dates order.
     if start_date >= end_date:
       message = 'La fecha inicial debe ser menor a la fecha final.'
       tk.messagebox.showerror(title='Error', message=message)
       return False
 
+    # Validate start and end dates range.
     dataset_date_values = dataset_utils.get_time_values()
     min_dataset_date = dataset_date_values[0].date()
     max_dataset_date = dataset_date_values[-1].date()
     if end_date < min_dataset_date or start_date > max_dataset_date:
       message = 'Las fechas deben estar dentro del rango de fechas del dataset. '
       message += f'El rango de fechas del dataset va del {min_dataset_date} hasta el {max_dataset_date}.'
-      tk.messagebox.showerror(title='Error', message=message)
-      return False
-
-    if len(empty_fields) > 0:
-      message = 'Todos los campos son obligatorios. Datos faltantes: \n'
-      message += ', '.join(empty_fields)
       tk.messagebox.showerror(title='Error', message=message)
       return False
 
