@@ -45,12 +45,12 @@ class SinglePointTimeSeriesView(TabView):
     variable_cb = form_fields.create_combobox_row(form_entries_frame, label_text, self.variable_list)
 
     label_text = 'Profundidad(es) [m]:'
-    default_depth = self.depth_list[0]
-    depth1_cb = form_fields.create_combobox_row(form_entries_frame, label_text, self.depth_list, default_option=default_depth)
-    depth2_cb = form_fields.create_combobox_row(form_entries_frame, ' ', self.depth_list, readonly=False)
-    depth3_cb = form_fields.create_combobox_row(form_entries_frame, ' ', self.depth_list, readonly=False)
-    depth4_cb = form_fields.create_combobox_row(form_entries_frame, ' ', self.depth_list, readonly=False)
-    depth5_cb = form_fields.create_combobox_row(form_entries_frame, ' ', self.depth_list, readonly=False)
+    depth_cb_list = form_fields.MultipleCombobox(
+      form_entries_frame, 
+      label_text, 
+      self.depth_list, 
+      readonly=False
+    )
 
     label_text = 'Título del gráfico:'
     chart_title_entry = form_fields.create_entry_row(form_entries_frame, label_text)
@@ -72,8 +72,7 @@ class SinglePointTimeSeriesView(TabView):
       form_frame, 
       text='Generar gráfico', 
       command=lambda: self.__start_creation_chart(
-        variable_cb.get(),
-        [depth1_cb.get(), depth2_cb.get(), depth3_cb.get(), depth4_cb.get(), depth5_cb.get()],
+        variable_cb.get(), depth_cb_list.get(),
         chart_title_entry.get(), longitude_entry.get(), latitude_entry.get(),
         start_date=start_date_entry.entry.get(), end_date=end_date_entry.entry.get() 
       )
@@ -112,7 +111,7 @@ class SinglePointTimeSeriesView(TabView):
     self.__show_and_run_progress_bar()
     self.chart_and_btns_frame.pack_forget()
 
-    valid_fields = self.__fields_validation(variable, [0,1,2], chart_title, longitude, latitude, 
+    valid_fields = self.__fields_validation(variable, depths, chart_title, longitude, latitude, 
       start_date, end_date)
     if not valid_fields:
       return
@@ -142,7 +141,8 @@ class SinglePointTimeSeriesView(TabView):
   ):
     date_range = slice(start_date, end_date)
     grouping_dim_name = 'depth'
-    depths = [int(depth) for depth in depths if depth.isdigit()]
+    depths = [float(depth) for depth in depths]
+
     dim_constraints = {
       'time': date_range,
       'depth': depths,
@@ -191,6 +191,7 @@ class SinglePointTimeSeriesView(TabView):
     # Empty fields validation.
     empty_fields = []
     if variable == '': empty_fields.append('Variable')
+    if len(depths) == 0: empty_fields.append('Profundidad(es)')
     if chart_title == '': empty_fields.append('Título del gráfico')
     if longitude == '': empty_fields.append('Longitud')
     if latitude == '': empty_fields.append('Latitud')
@@ -201,6 +202,21 @@ class SinglePointTimeSeriesView(TabView):
       message = 'Todos los campos son obligatorios. Datos faltantes: \n'
       message += ', '.join(empty_fields)
       tk.messagebox.showerror(title='Error', message=message)
+      return False
+
+    # Validate depths
+    try:
+      if len(depths) != len(set(depths)):
+        raise Exception('Profundidades duplicadas. Asegúrese de que no haya profundidades repetidas.')
+
+      for depth in depths:
+        if depth == '':
+          message = 'Profundidad(es) sin valor, asegúrese de que cada profundidad tenga un valor.'
+          message += ' Si no desea especificar una profundidad, elimínela.'
+          raise Exception(message)
+          break
+    except Exception as e:
+      tk.messagebox.showerror(title='Error', message=e)
       return False
 
     # Validate longitude and latitude type and range.

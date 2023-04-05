@@ -144,7 +144,7 @@ class NewSheetDialogBox(QueryDialog):
     return {
       'proceed_to_add': self.proceed_to_add,
       'name': self._result, 
-      'chart_type': self.chart_type_dict[self.chart_type_cb_result]
+      'chart_type': self.chart_type_dict[self.chart_type_cb_result] if self.proceed_to_add else None
     }
 
 

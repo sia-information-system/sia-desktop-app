@@ -14,7 +14,7 @@ def get_variables():
 def get_depth_values(name_in_dataset='depth'):
   dataset = global_vars.current_project_dataset
   depth_values = dataset.coords[name_in_dataset].values
-  depth_values = [round(depth) for depth in depth_values]
+  depth_values = [round(depth, 3) for depth in depth_values]
   return depth_values
 
 def get_time_values(name_in_dataset='time'):
