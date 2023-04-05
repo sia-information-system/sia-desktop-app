@@ -45,6 +45,18 @@ class CurrentsChartView(TabView):
     label_text = 'Densidad de la flecha:'
     stride_entry = form_fields.create_entry_row(form_entries_frame, label_text)
 
+    label_text = 'Longitud mínima:'
+    lon_min_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+
+    label_text = 'Longitud máxima:'
+    lon_max_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+
+    label_text = 'Latitud mínima:'
+    lat_min_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+
+    label_text = 'Latitud máxima:'
+    lat_max_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+
     # Apply button.
     connect_button = ttk.Button(
       form_frame, 
@@ -53,7 +65,9 @@ class CurrentsChartView(TabView):
         depth_cb.get(),
         chart_title_entry.get(),
         target_date_entry.entry.get(),
-        stride_entry.get()
+        stride_entry.get(),
+        lon_min_entry.get(), lon_max_entry.get(),
+        lat_min_entry.get(), lat_max_entry.get(),
       )
     )
     connect_button.pack(pady=10)
@@ -73,18 +87,25 @@ class CurrentsChartView(TabView):
     depth,
     chart_title,
     target_date,
-    stride
+    stride,
+    lon_min, lon_max,
+    lat_min, lat_max
   ):
     print('-----------------------------')
     print(f'depth: "{depth}"')
     print(f'chart_title: "{chart_title}"')
     print(f'target_date: "{target_date}"')
     print(f'stride: "{stride}"')
+    print(f'lon_min: "{lon_min}"')
+    print(f'lon_max: "{lon_max}"')
+    print(f'lat_min: "{lat_min}"')
+    print(f'lat_max: "{lat_max}"')
 
     self.__show_and_run_progress_bar()
     self.chart_and_btns_frame.pack_forget()
 
-    valid_fields = self.__fields_validation(depth, chart_title, target_date, stride)
+    valid_fields = self.__fields_validation(depth, chart_title, target_date, stride,
+      lon_min, lon_max, lat_min, lat_max)
     if not valid_fields:
       return
 
@@ -92,7 +113,8 @@ class CurrentsChartView(TabView):
       dataset = global_vars.current_project_dataset 
       self.chart_builder = level_chart.ArrowChartBuilder(dataset=dataset)
 
-      self.__generate_static_chart(depth, chart_title, target_date, stride)
+      self.__generate_static_chart(depth, chart_title, target_date, stride, 
+        lon_min, lon_max, lat_min, lat_max)
 
       self.__stop_and_hide_progress_bar()
       self.chart_and_btns_frame.pack(fill='both', expand=1)
@@ -105,11 +127,18 @@ class CurrentsChartView(TabView):
     depth,
     chart_title,
     target_date,
-    stride
-  ):    
+    stride,
+    lon_min, lon_max,
+    lat_min, lat_max
+  ):
+    lon_min, lon_max = int(lon_min), int(lon_max)
+    lat_min, lat_max = int(lat_min), int(lat_max)
+
     dim_constraints = {
       'time': [target_date],
       'depth': depth,
+      'longitude': slice(lon_min, lon_max),
+      'latitude': slice(lat_min, lat_max),
     }
 
     print(f'-> Static Arror chart image.')
@@ -136,7 +165,9 @@ class CurrentsChartView(TabView):
     depth, 
     chart_title,
     target_date,
-    stride
+    stride,
+    lon_min, lon_max,
+    lat_min, lat_max
   ):
     chart_title = chart_title.strip()
     
@@ -168,6 +199,33 @@ class CurrentsChartView(TabView):
       target_date = datetime.strptime(target_date, '%Y-%m-%d')
     except:
       message = 'La fecha objetivo debe tener el formato "YYYY-MM-DD".'
+      tk.messagebox.showerror(title='Error', message=message)
+      return False
+
+    # Validate minimun and maximum longitute and latitude range.
+    try:
+      lon_min, lon_max = int(lon_min), int(lon_max)
+      lat_min, lat_max = int(lat_min), int(lat_max)
+
+      if lon_min >= lon_max or lat_min >= lat_max:
+        message = 'La longitud o latitud minima debe ser menor a su valor máximo.'
+        tk.messagebox.showerror(title='Error', message=message)
+        return False
+
+      dataset_lon_values = dataset_utils.get_longitude_values()
+      min_dataset_lon, max_dataset_lon = min(dataset_lon_values), max(dataset_lon_values)
+      dataset_lat_values = dataset_utils.get_latitude_values()
+      min_dataset_lat, max_dataset_lat = min(dataset_lat_values), max(dataset_lat_values)
+
+      if lon_max < min_dataset_lon or lon_min > max_dataset_lon or \
+        lat_max < min_dataset_lat or lat_min > max_dataset_lat:
+        message = 'La longitud y latitud deben estar dentro del rango del dataset.\n'
+        message += f'Rango de longitud: {min_dataset_lon}° a {max_dataset_lon}°.\n'
+        message += f'Rango de latitud: {min_dataset_lat}° a {max_dataset_lat}°.'
+        tk.messagebox.showerror(title='Error', message=message)
+        return False
+    except:
+      message = 'La longitud y la latitud deben ser números flotantes.'
       tk.messagebox.showerror(title='Error', message=message)
       return False
 

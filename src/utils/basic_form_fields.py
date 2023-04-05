@@ -8,7 +8,8 @@ def create_combobox_row(
   default_option=None, 
   readonly=True,
   label_width=25,
-  entry_width=None
+  entry_width=None,
+  tooltip_text=None
 ):
   row_frame = ttk.Frame(master, bootstyle='default')
   row_frame.pack(fill='x', pady=5)
@@ -24,7 +25,16 @@ def create_combobox_row(
   combobox = ttk.Combobox(combobox_frame, values=options, state=state, width=entry_width)
   if default_option != None:
     combobox.set(default_option)
-  combobox.pack(fill='x')
+
+  # If user do not want to add a tooltip, then the combobox is packed directly.
+  if not tooltip_text:
+    combobox.pack(fill='x')
+  else:
+    combobox.pack(fill='x', side='left', expand=1)
+
+    tooltip_label = ttk.Label(combobox_frame, text='Info')
+    tooltip_label.pack(side='right', padx=10)
+    ttk.tooltip.ToolTip(tooltip_label, text=tooltip_text, bootstyle='info-inverse')
 
   return combobox
 
@@ -60,12 +70,12 @@ def create_date_entry_row(master, label_text, label_width=25):
   title_label.pack(fill='x')
 
   date_entry_frame = ttk.Frame(row_frame)
-  date_entry_frame.pack(side='left')
+  date_entry_frame.pack(fill='x', side='right', expand=1)
   date_entry = ttk.DateEntry(date_entry_frame, dateformat='%Y-%m-%d')
-  date_entry.pack()
+  date_entry.pack(fill='x', side='left', expand=1)
 
-  tooltip_label = ttk.Label(row_frame, text='Info')
-  tooltip_label.pack(side='left', padx=10)
+  tooltip_label = ttk.Label(date_entry_frame, text='Info')
+  tooltip_label.pack(side='right', padx=10)
   text_info = 'Clic izquierdo en la flecha para mover el calendario un mes.\n'
   text_info += 'Clic derecho en la flecha para mover el calendario un año.'
   ttk.tooltip.ToolTip(tooltip_label, text=text_info, bootstyle='info-inverse')

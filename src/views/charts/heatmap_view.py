@@ -66,7 +66,8 @@ class HeatMapView(TabView):
 
     label_text = 'Paleta de colores:'
     palette_colors_list = ['OrRd', 'plasma', 'Greens', 'viridis']
-    palette_colors_cb = form_fields.create_combobox_row(form_entries_frame, label_text, palette_colors_list)
+    tooltip_text = 'Consultar Manual de usuario para más información sobre los codigos de los colores.'
+    palette_colors_cb = form_fields.create_combobox_row(form_entries_frame, label_text, palette_colors_list, tooltip_text=tooltip_text)
 
     # Following entries will be hidden or shown depending on the selected build method.
 
