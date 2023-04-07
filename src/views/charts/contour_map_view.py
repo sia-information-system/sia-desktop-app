@@ -147,6 +147,10 @@ class ContourMapView(TabView):
     self.__show_and_run_progress_bar()
     self.chart_and_btns_frame.pack_forget()
 
+    dims_and_var_configured = self.dataset_dims_and_vars_validation()
+    if not dims_and_var_configured:
+      return
+
     valid_fields = self.__fields_validation(build_method, variable, depth, chart_title, 
       palette_colors, n_curves, target_date, duration_unit, duration, start_date, end_date)
     if not valid_fields:
@@ -177,12 +181,12 @@ class ContourMapView(TabView):
     target_date
   ):
     dim_constraints = {
-      'time': [target_date],
-      'depth': [depth]
+      self.time_dim: [target_date],
+      self.depth_dim: [depth]
     }
-    if variable == 'zos':
+    if variable == 'zos': # TODO: Pending.
       dim_constraints = {
-        'time': [target_date]
+        self.time_dim: [target_date]
       }
     print(f'-> ContourMap static image for "{variable}" variable.')
     self.chart_builder.build_static(
@@ -190,8 +194,8 @@ class ContourMapView(TabView):
       title=chart_title.strip(),
       var_label=self.plot_measure_label[variable],
       dim_constraints=dim_constraints,
-      lat_dim_name='latitude', # TODO: Revisar si el usuario tendre que ingresar esto.
-      lon_dim_name='longitude', # TODO: Revisar si el usuario tendre que ingresar esto.
+      lat_dim_name=self.lat_dim,
+      lon_dim_name=self.lon_dim,
       color_palette=palette_colors,
       num_levels=int(n_curves)
     )
@@ -216,10 +220,10 @@ class ContourMapView(TabView):
   ):
     print(f'-> ContourMap gif for "{variable}" variable.')
     dim_constraints = {
-      'depth': [depth],
-      'time': slice(start_date, end_date)
+      self.depth_dim: [depth],
+      self.time_dim: slice(start_date, end_date)
     }
-    if variable == 'zos':
+    if variable == 'zos': # TODO: Pending.
       dim_constraints = {}
 
     duration_unit = self.duration_unit_dict[duration_unit]
@@ -231,9 +235,9 @@ class ContourMapView(TabView):
         title=chart_title.strip(),
         var_label=self.plot_measure_label[variable],
         dim_constraints=dim_constraints,
-        time_dim_name='time',
-        lat_dim_name='latitude',
-        lon_dim_name='longitude',
+        time_dim_name=self.time_dim,
+        lat_dim_name=self.lat_dim,
+        lon_dim_name=self.lon_dim,
         duration=duration,
         duration_unit=duration_unit,
         color_palette=palette_colors,

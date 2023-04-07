@@ -104,6 +104,10 @@ class CurrentsChartView(TabView):
     self.__show_and_run_progress_bar()
     self.chart_and_btns_frame.pack_forget()
 
+    dims_and_var_configured = self.dataset_dims_and_vars_validation()
+    if not dims_and_var_configured:
+      return
+
     valid_fields = self.__fields_validation(depth, chart_title, target_date, stride,
       lon_min, lon_max, lat_min, lat_max)
     if not valid_fields:
@@ -135,18 +139,18 @@ class CurrentsChartView(TabView):
     lat_min, lat_max = int(lat_min), int(lat_max)
 
     dim_constraints = {
-      'time': [target_date],
-      'depth': depth,
-      'longitude': slice(lon_min, lon_max),
-      'latitude': slice(lat_min, lat_max),
+      self.time_dim: [target_date],
+      self.depth_dim: depth,
+      self.lon_dim: slice(lon_min, lon_max),
+      self.lat_dim: slice(lat_min, lat_max),
     }
 
     print(f'-> Static Arror chart image.')
     self.chart_builder.build_static(
-      var_ew = 'uo', # TODO: Solicitar al usuario.
-      var_nw = 'vo', # TODO: Solicitar al usuario.
-      var_lon = 'longitude', # TODO: Solicitar al usuario.
-      var_lat = 'latitude', # TODO: Solicitar al usuario.
+      var_ew = self.eastward_var,
+      var_nw = self.northward_var,
+      var_lon = self.lon_dim,
+      var_lat = self.lat_dim,
       title = chart_title,
       dim_constraints= dim_constraints,
       stride = int(stride)

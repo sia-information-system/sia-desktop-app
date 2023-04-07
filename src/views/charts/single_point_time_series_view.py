@@ -111,6 +111,10 @@ class SinglePointTimeSeriesView(TabView):
     self.__show_and_run_progress_bar()
     self.chart_and_btns_frame.pack_forget()
 
+    dims_and_var_configured = self.dataset_dims_and_vars_validation()
+    if not dims_and_var_configured:
+      return
+
     valid_fields = self.__fields_validation(variable, depths, chart_title, longitude, latitude, 
       start_date, end_date)
     if not valid_fields:
@@ -140,20 +144,20 @@ class SinglePointTimeSeriesView(TabView):
     end_date
   ):
     date_range = slice(start_date, end_date)
-    grouping_dim_name = 'depth'
+    grouping_dim_name = self.depth_dim
     depths = [float(depth) for depth in depths]
 
     dim_constraints = {
-      'time': date_range,
-      'depth': depths,
-      'latitude': latitude,
-      'longitude': longitude
+      self.time_dim: date_range,
+      self.depth_dim: depths,
+      self.lat_dim: latitude,
+      self.lon_dim: longitude
     }
-    if variable == 'zos':
+    if variable == 'zos': # TODO: Pending.
       dim_constraints = {
-        'time': date_range,
-        'latitude': latitude,
-        'longitude': longitude
+        self.time_dim: date_range,
+        self.lat_dim: latitude,
+        self.lon_dim: longitude
       }
       grouping_dim_name=None
     print(f'-> Static Time series image for "{variable}" variable.')
@@ -162,12 +166,12 @@ class SinglePointTimeSeriesView(TabView):
       title=chart_title.strip(),
       var_label=self.plot_measure_label[variable],
       dim_constraints=dim_constraints,
-      lat_dim_name='latitude', # TODO: Solicitar al usuario.
-      lon_dim_name='longitude', # TODO: Solicitar al usuario.
+      lat_dim_name=self.lat_dim,
+      lon_dim_name=self.lon_dim,
       grouping_dim_label='Depth (m)',
-      grouping_dim_name=grouping_dim_name, # TODO: Solicitar al usuario.
+      grouping_dim_name=grouping_dim_name,
       time_dim_label='Dates',
-      time_dim_name='time', # TODO: Solicitar al usuario.
+      time_dim_name=self.time_dim,
     )
 
     img_buffer = self.chart_builder._chart.get_buffer()

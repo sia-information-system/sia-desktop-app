@@ -3,12 +3,20 @@ import ttkbootstrap as ttk
 from ttkbootstrap.scrolled import ScrolledFrame
 import pathlib
 from utils.global_constants import ASSETS_DIR
+import utils.global_variables as global_vars
 from PIL import ImageTk, Image
 
 class TabView(ttk.Frame):
   def __init__(self, master, chart_type):
     super().__init__(master, bootstyle='default')
     self.chart_type = chart_type
+
+    self.time_dim = global_vars.time_dim
+    self.depth_dim = global_vars.depth_dim
+    self.lon_dim = global_vars.lon_dim
+    self.lat_dim = global_vars.lat_dim
+    self.northward_var = global_vars.northward_var
+    self.eastward_var = global_vars.eastward_var
 
     self.__col1_arrow_btn = None
     self.__arrow_label = None
@@ -121,6 +129,18 @@ class TabView(ttk.Frame):
     original_width, original_height = chart_img.size
     new_width = int(original_width * max_height / original_height)
     return chart_img.resize((new_width, max_height), Image.ANTIALIAS)
+
+  def dataset_dims_and_vars_validation(self):
+    # Check one dimension is enough to validate if dimensions and variables are configured.
+    if not self.time_dim:
+      message = 'Antes de continuar debe configurar los nombres de las dimensiones y variables '
+      message += 'que usa el dataset. Para ello, por favor vaya a la pestaña "Información de datos"'
+      message += ' y llene el formulario.\n'
+      message += 'Este paso solo se le pedirá hacerlo una vez. Disculpe las molestias.'
+      tk.messagebox.showerror(title='Dimensiones y variables no configuradas', message=message)
+      return False
+
+    return True
 
   def __toggle_column(self, event):
     if self.__col2_params.winfo_ismapped():
