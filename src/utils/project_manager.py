@@ -54,7 +54,19 @@ def save_project(project_name, dataset_path=None):
   metadata['project'] = { 'name': project_name }
   metadata['dataset'] = { 
     'originalPath': dataset_path,
-    'fromProjectPath': f'dataset/{project_dataset_filename}' if user_chose_select_data else None
+    'fromProjectPath': f'dataset/{project_dataset_filename}' if user_chose_select_data else None,
+    'config': {
+      'dimensions': {
+        'time': None,
+        'depth': None,
+        'lon': None,
+        'lat': None
+      },
+      'variables': {
+        'northward': None,
+        'eastward': None
+      }
+    }
   }
   metadata['worksheets'] = []
 
@@ -73,6 +85,18 @@ def project_exists(project_name):
   project = project_name.strip().lower()
   return project in get_projects()
 
+def get_project_name(project_path):
+  if not project_path:
+    return ''
+
+  # Find the project metadata (json file).
+  project_metadata_path = get_project_metadata_file_path(project_path)
+  with open(project_metadata_path) as json_file:
+    metadata = json.load(json_file)
+    return metadata['project']['name']
+
+# --------------------------------  Related project dataset --------------------------------
+
 # Return dataset using path in project.json
 def get_dataset_project(project_path):
   # Find the project metadata (json file).
@@ -86,15 +110,38 @@ def get_dataset_project(project_path):
     ds.close()
   return ds
 
-def get_project_name(project_path):
-  if not project_path:
-    return ''
-
+def save_dataset_config(
+  project_path,
+  time_dim,
+  depth_dim,
+  lon_dim,
+  lat_dim,
+  northward_var,
+  eastward_var
+):
   # Find the project metadata (json file).
   project_metadata_path = get_project_metadata_file_path(project_path)
   with open(project_metadata_path) as json_file:
     metadata = json.load(json_file)
-    return metadata['project']['name']
+
+  # Update dataset config.
+  metadata['dataset']['config']['dimensions']['time'] = time_dim
+  metadata['dataset']['config']['dimensions']['depth'] = depth_dim
+  metadata['dataset']['config']['dimensions']['lon'] = lon_dim
+  metadata['dataset']['config']['dimensions']['lat'] = lat_dim
+  metadata['dataset']['config']['variables']['northward'] = northward_var
+  metadata['dataset']['config']['variables']['eastward'] = eastward_var
+
+  # Save updated metadata json in project directory.
+  with open(project_metadata_path, 'w') as json_file:
+    json.dump(metadata, json_file, indent=2)
+
+def get_dataset_config(project_path):
+  # Find the project metadata (json file).
+  project_metadata_path = get_project_metadata_file_path(project_path)
+  with open(project_metadata_path) as json_file:
+    metadata = json.load(json_file)
+    return metadata['dataset']['config']
 
 # -------------------------------- Related to sheets ---------------------------------
 
@@ -143,3 +190,5 @@ def delete_worksheet(project_path, sheet_name):
   # Save updated metadata json in project directory.
   with open(project_metadata_path, 'w') as json_file:
     json.dump(metadata, json_file, indent=2)
+
+# -------------------------------------- Configurations -------------------------------------------
