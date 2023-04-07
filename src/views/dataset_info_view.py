@@ -52,6 +52,11 @@ class DatasetInfoView(ScrollableView):
     form_frame = ttk.Frame(set_dim_vars_frame)
     form_frame.pack(fill='x', padx=20, pady=10)
 
+    label_text = 'Con apoyo de la información de la columna Metadatos por favor '
+    label_text += 'indique que nombre es usado para cada dimensión y variable.'
+    instructions_label = ttk.Label(form_frame, text=label_text)
+    instructions_label.pack(fill='x', expand=1, pady=10)
+
     form_entries_frame = ttk.Frame(form_frame)
     form_entries_frame.pack(fill='x')
 

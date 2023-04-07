@@ -194,6 +194,7 @@ class DataExtractorView(ScrollableView):
     extractor = OpendapExtractor(
       opendap_url=opendap_link,
       auth=SimpleAuth(user=username, passwd=password),
+      # TODO: Get name of dimensions from dataset.
       dim_constraints={
         'time': slice(start_date, end_date),
         'depth': slice(depth_min, depth_max),

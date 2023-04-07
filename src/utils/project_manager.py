@@ -23,9 +23,20 @@ def open_project(root_window):
   if not project_metadata_file_path:
     return
   project_path = pathlib.Path(project_metadata_file_path).parent.absolute()
+
+  # Config global variables used in the app.
   global_vars.current_project_path = project_path
   global_vars.current_project_dataset = get_dataset_project(project_path)
 
+  dataset_config = get_dataset_config(global_vars.current_project_path)
+  global_vars.time_dim = dataset_config['dimensions']['time']
+  global_vars.depth_dim = dataset_config['dimensions']['depth']
+  global_vars.lon_dim = dataset_config['dimensions']['lon']
+  global_vars.lat_dim = dataset_config['dimensions']['lat']
+  global_vars.northward_var = dataset_config['variables']['northward']
+  global_vars.eastward_var = dataset_config['variables']['eastward']
+
+  # Change to workspace view.
   workspace_view = gen_utils.find_view(root_window, 'WorkspaceView')
   gen_utils.change_view(root_window, workspace_view)
 

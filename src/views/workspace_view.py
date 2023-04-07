@@ -236,7 +236,11 @@ class WorkspaceView(ttk.Frame):
     if not tab_id:
       return
 
-    confirm_delete = messagebox.askyesno('Confirmación', '¿Quiere continuar con la eliminación de la hoja actual?')
+    confirm_delete = messagebox.askyesno(
+      title='Confirmación', 
+      message='¿Quiere continuar con la eliminación de la hoja actual?', 
+      icon=messagebox.WARNING
+    )
     if not confirm_delete:
       return
 
