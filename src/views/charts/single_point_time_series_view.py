@@ -1,4 +1,5 @@
 import pathlib
+import re
 import tkinter as tk
 import ttkbootstrap as ttk
 import utils.dataset_utils as dataset_utils
@@ -129,9 +130,8 @@ class SinglePointTimeSeriesView(TabView):
 
       self.__stop_and_hide_progress_bar()
       self.chart_and_btns_frame.pack(fill='both', expand=1)
-    except Exception as e:
-      print(f'Error: {e}')
-      pass
+    except Exception as error:
+      tk.messagebox.showerror(title='Error', message=error)
 
   def __generate_static_chart(
     self,
@@ -144,35 +144,45 @@ class SinglePointTimeSeriesView(TabView):
     end_date
   ):
     date_range = slice(start_date, end_date)
-    grouping_dim_name = self.depth_dim
+    grouping_dim_name = None
     depths = [float(depth) for depth in depths]
 
     dim_constraints = {
       self.time_dim: date_range,
-      self.depth_dim: depths,
       self.lat_dim: latitude,
       self.lon_dim: longitude
     }
-    if variable == 'zos': # TODO: Pending.
-      dim_constraints = {
-        self.time_dim: date_range,
-        self.lat_dim: latitude,
-        self.lon_dim: longitude
-      }
-      grouping_dim_name=None
+    if len(depths) > 0:
+      dim_constraints[self.depth_dim] = depths
+      grouping_dim_name = self.depth_dim
+
     print(f'-> Static Time series image for "{variable}" variable.')
-    self.chart_builder.build_static(
-      var_name=variable,
-      title=chart_title.strip(),
-      var_label=self.plot_measure_label[variable],
-      dim_constraints=dim_constraints,
-      lat_dim_name=self.lat_dim,
-      lon_dim_name=self.lon_dim,
-      grouping_dim_label='Depth (m)',
-      grouping_dim_name=grouping_dim_name,
-      time_dim_label='Dates',
-      time_dim_name=self.time_dim,
-    )
+    try:
+      self.chart_builder.build_static(
+        var_name=variable,
+        title=chart_title.strip(),
+        var_label=self.plot_measure_label[variable],
+        dim_constraints=dim_constraints,
+        lat_dim_name=self.lat_dim,
+        lon_dim_name=self.lon_dim,
+        grouping_dim_label='Depth (m)',
+        grouping_dim_name=grouping_dim_name,
+        time_dim_label='Dates',
+        time_dim_name=self.time_dim,
+      )
+    except Exception as error:
+      print(f'Error: {error}')
+
+      if 'is not a valid dimension or coordinate' in str(error):
+        dimension_pattern = r"'(.*?)'" # The dimension is wrapped in single quotes.
+        dimension_err = re.findall(dimension_pattern, str(error))
+        message = 'Ocurrió un error al generar el gráfico.\n'
+        message += f'Para la variable en uso, la dimensión {dimension_err[0]} no es válida.'
+        raise Exception(message)
+        return
+
+      errror_msg = 'Ocurrió un error al generar el gráfico.'
+      raise Exception(errror_msg)
 
     img_buffer = self.chart_builder._chart.get_buffer()
     self.chart_img = ImageTk.PhotoImage(Image.open(img_buffer))
@@ -195,7 +205,7 @@ class SinglePointTimeSeriesView(TabView):
     # Empty fields validation.
     empty_fields = []
     if variable == '': empty_fields.append('Variable')
-    if len(depths) == 0: empty_fields.append('Profundidad(es)')
+    # if len(depths) == 0: empty_fields.append('Profundidad(es)')
     if chart_title == '': empty_fields.append('Título del gráfico')
     if longitude == '': empty_fields.append('Longitud')
     if latitude == '': empty_fields.append('Latitud')

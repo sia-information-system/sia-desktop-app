@@ -1,4 +1,5 @@
 import pathlib
+import re
 import tkinter as tk
 import ttkbootstrap as ttk
 import utils.dataset_utils as dataset_utils
@@ -58,8 +59,8 @@ class HeatMapView(TabView):
     variable_cb = form_fields.create_combobox_row(form_entries_frame, label_text, self.variable_list)
 
     label_text = 'Profundidad [m]:'
-    default_depth = self.depth_list[0]
-    depth_cb = form_fields.create_combobox_row(form_entries_frame, label_text, self.depth_list, default_option=default_depth)
+    options = [''] + self.depth_list
+    depth_cb = form_fields.create_combobox_row(form_entries_frame, label_text, options)
 
     label_text = 'Título del gráfico:'
     chart_title_entry = form_fields.create_entry_row(form_entries_frame, label_text)
@@ -163,8 +164,8 @@ class HeatMapView(TabView):
 
       self.__stop_and_hide_progress_bar()
       self.chart_and_btns_frame.pack(fill='both', expand=1)
-    except:
-      pass
+    except Exception as error:
+      tk.messagebox.showerror(title='Error', message=error)
 
   def __generate_static_chart(
     self,
@@ -175,23 +176,35 @@ class HeatMapView(TabView):
     target_date
   ):
     dim_constraints = {
-      self.time_dim: [target_date],
-      self.depth_dim: [depth]
+      self.time_dim: [target_date]
     }
-    if variable == 'zos': # TODO: Pending.
-      dim_constraints = {
-        self.time_dim: [target_date]
-      }
+    if depth != '':
+      dim_constraints[self.depth_dim] = [depth]
+
     print(f'-> Heatmap static image for "{variable}" variable.')
-    self.chart_builder.build_static(
-      var_name=variable,
-      title=chart_title.strip(),
-      var_label=self.plot_measure_label[variable],
-      dim_constraints=dim_constraints,
-      lat_dim_name=self.lat_dim,
-      lon_dim_name=self.lon_dim,
-      color_palette=palette_colors
-    )
+    try:
+      self.chart_builder.build_static(
+        var_name=variable,
+        title=chart_title.strip(),
+        var_label=self.plot_measure_label[variable],
+        dim_constraints=dim_constraints,
+        lat_dim_name=self.lat_dim,
+        lon_dim_name=self.lon_dim,
+        color_palette=palette_colors
+      )
+    except Exception as error:
+      print(f'Error: {error}')
+
+      if 'is not a valid dimension or coordinate' in str(error):
+        dimension_pattern = r"'(.*?)'" # The dimension is wrapped in single quotes.
+        dimension_err = re.findall(dimension_pattern, str(error))
+        message = 'Ocurrió un error al generar el gráfico.\n'
+        message += f'Para la variable en uso, la dimensión {dimension_err[0]} no es válida.'
+        raise Exception(message)
+        return
+
+      errror_msg = 'Ocurrió un error al generar el gráfico.'
+      raise Exception(errror_msg)
 
     img_buffer = self.chart_builder._chart.get_buffer()
     self.chart_img = ImageTk.PhotoImage(Image.open(img_buffer))
@@ -212,11 +225,10 @@ class HeatMapView(TabView):
   ):
     print(f'-> Heatmap gif for "{variable}" variable.')
     dim_constraints = {
-      self.depth_dim: [depth],
       self.time_dim: slice(start_date, end_date)
     }
-    if variable == 'zos': # TODO: Pending.
-      dim_constraints = {}
+    if depth != '':
+      dim_constraints[self.depth_dim] = [depth]
 
     duration_unit = self.duration_unit_dict[duration_unit]
     duration = int(duration) if duration_unit == 'FRAMES_PER_SECOND' else round(float(duration), 2)
@@ -234,11 +246,27 @@ class HeatMapView(TabView):
         duration_unit=duration_unit,
         color_palette=palette_colors
       )
-    except:
-      message = 'Rango de fechas no válido. Revise la información del '
-      message += 'dataset respecto al rango de fechas y su resolución temporal.'
-      tk.messagebox.showerror(title='Error', message=message)
-      raise ValueError('Rango de fechas no válido')
+    except Exception as error:
+      print(f'Error: {error}')
+
+      if 'is not a valid dimension or coordinate' in str(error):
+        dimension_pattern = r"'(.*?)'" # The dimension is wrapped in single quotes.
+        dimension_err = re.findall(dimension_pattern, str(error))
+        message = 'Ocurrió un error al generar el gráfico.\n'
+        message += f'Para la variable en uso, la dimensión {dimension_err[0]} no es válida.'
+        raise Exception(message)
+        return
+
+      if 'numpy.nanmin raises on a.size==0 and axis=None' in str(error):
+        message = 'Ocurrió un error al generar el gráfico.\n'
+        message += 'Rango de fechas no disponible, por favor consulte la información '
+        message += 'del dataset respecto a la dimensión de tiempo y su resolución temporal '
+        message += 'en la pestaña de "Información de datos"'
+        raise Exception(message)
+        return
+
+      errror_msg = 'Ocurrió un error al generar el gráfico.'
+      raise Exception(errror_msg)
 
     gif_buffer = self.chart_builder._chart.get_buffer()
     self.gif_images = self.get_gif_frames(gif_buffer)
@@ -273,7 +301,7 @@ class HeatMapView(TabView):
     empty_fields = []
     if build_method == '': empty_fields.append('Método de construcción')
     if variable == '': empty_fields.append('Variable')
-    if depth == '': empty_fields.append('Profundidad')
+    # if depth == '': empty_fields.append('Profundidad')
     if chart_title == '': empty_fields.append('Título del gráfico')
     if palette_colors == '': empty_fields.append('Paleta de colores')
     if self.__build_method == 'static':
