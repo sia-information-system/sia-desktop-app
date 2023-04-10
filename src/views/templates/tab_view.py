@@ -32,7 +32,8 @@ class TabView(ttk.Frame):
     self.current_frame = 0
     self.num_frames = None
     self.play_chart_btn = None
-    self.gif_frame_duration_ms = 1000 # miliseconds
+    self.duration_unit = None
+    self.duration = None
 
     self.chart_builder = None
 
@@ -165,8 +166,13 @@ class TabView(ttk.Frame):
       self.play_chart_btn['state'] = 'normal'
       return
 
+    if self.duration_unit == 'SECONDS_PER_FRAME':
+      gif_frame_duration_ms = round(self.duration * 1000)
+    elif self.duration_unit == 'FRAMES_PER_SECOND':
+      gif_frame_duration_ms = round(1000 / self.duration)
+
     # Recursive.
-    self.after(self.gif_frame_duration_ms, self.__play_gif)
+    self.after(gif_frame_duration_ms, self.__play_gif)
 
   def __save_chart(self):
     # Avoid save examples charts.

@@ -1,12 +1,13 @@
 import pathlib
 import re
+import sys
 import tkinter as tk
 import ttkbootstrap as ttk
 import utils.dataset_utils as dataset_utils
 import utils.global_variables as global_vars
 import utils.basic_form_fields as form_fields
 from views.templates.tab_view import TabView
-from omdepplotlib.chart_building import level_chart
+from siaplotlib.chart_building import level_chart
 from PIL import ImageTk, Image
 from datetime import datetime
 
@@ -110,10 +111,10 @@ class HeatMapView(TabView):
       maximum=40, 
       mode='determinate',
       length=100,
-      value=20,
+      value=0,
       bootstyle='success striped'
     )
-    self.__show_and_run_progress_bar()
+    self.__progress_bar.pack(pady=10)
 
   def __start_creation_chart(
     self,
@@ -128,44 +129,41 @@ class HeatMapView(TabView):
     start_date=None,
     end_date=None
   ):
-    print('-----------------------------')
-    print(f'build_method: "{build_method}"')
-    print(f'variable: "{variable}"')
-    print(f'depth: "{depth}"')
-    print(f'chart_title: "{chart_title}"')
-    print(f'palette_colors: "{palette_colors}"')
-    print(f'target_date: "{target_date}"')
-    print(f'duration_unit: "{duration_unit}"')
-    print(f'duration: "{duration}"')
-    print(f'start_date: "{start_date}"')
-    print(f'end_date: "{end_date}"')
+    print('-----------------------------', file=sys.stderr)
+    print(f'build_method: "{build_method}"', file=sys.stderr)
+    print(f'variable: "{variable}"', file=sys.stderr)
+    print(f'depth: "{depth}"', file=sys.stderr)
+    print(f'chart_title: "{chart_title}"', file=sys.stderr)
+    print(f'palette_colors: "{palette_colors}"', file=sys.stderr)
+    print(f'target_date: "{target_date}"', file=sys.stderr)
+    print(f'duration_unit: "{duration_unit}"', file=sys.stderr)
+    print(f'duration: "{duration}"', file=sys.stderr)
+    print(f'start_date: "{start_date}"', file=sys.stderr)
+    print(f'end_date: "{end_date}"', file=sys.stderr)
 
-    self.__show_and_run_progress_bar()
+    # Hide column 2 with the chart and buttons.
     self.chart_and_btns_frame.pack_forget()
-
+    # Validations.
     dims_and_var_configured = self.dataset_dims_and_vars_validation()
     if not dims_and_var_configured:
       return
-
     valid_fields = self.__fields_validation(build_method, variable, depth, chart_title, 
       palette_colors, target_date, duration_unit, duration, start_date, end_date)
     if not valid_fields:
       return
+    # Start progress bar.
+    self.__start_progress_bar()
 
     try:
-      dataset = global_vars.current_project_dataset
-      self.chart_builder = level_chart.HeatMapBuilder(dataset=dataset)
       if self.__build_method == 'static':
         self.__generate_static_chart(variable, depth, chart_title, palette_colors,
           target_date)
       elif self.__build_method == 'animated':
         self.__generate_animated_chart(variable, depth, chart_title, palette_colors,
           duration_unit, duration, start_date, end_date)
-
-      self.__stop_and_hide_progress_bar()
-      self.chart_and_btns_frame.pack(fill='both', expand=1)
-    except Exception as error:
-      tk.messagebox.showerror(title='Error', message=error)
+    except Exception as err:
+      self.__stop_progress_bar()
+      tk.messagebox.showerror(title='Error', message=err)
 
   def __generate_static_chart(
     self,
@@ -175,42 +173,51 @@ class HeatMapView(TabView):
     palette_colors,
     target_date
   ):
+    print(f'-> Heatmap static image for "{variable}" variable.', file=sys.stderr)
+    dataset = global_vars.current_project_dataset
     dim_constraints = {
       self.time_dim: [target_date]
     }
     if depth != '':
       dim_constraints[self.depth_dim] = [depth]
 
-    print(f'-> Heatmap static image for "{variable}" variable.')
-    try:
-      self.chart_builder.build_static(
-        var_name=variable,
-        title=chart_title.strip(),
-        var_label=self.plot_measure_label[variable],
-        dim_constraints=dim_constraints,
-        lat_dim_name=self.lat_dim,
-        lon_dim_name=self.lon_dim,
-        color_palette=palette_colors
-      )
-    except Exception as error:
-      print(f'Error: {error}')
+    self.chart_builder = level_chart.StaticHeatMapBuilder(
+      dataset=dataset,
+      var_name=variable,
+      title=chart_title.strip(),
+      var_label=self.plot_measure_label[variable],
+      dim_constraints=dim_constraints,
+      lat_dim_name=self.lat_dim,
+      lon_dim_name=self.lon_dim,
+      color_palette=palette_colors
+    )
+    self.chart_builder.build(
+      success_callback=self.__static_success_build_callback, 
+      failure_callback=self.__static_failure_build_callback
+    )
 
-      if 'is not a valid dimension or coordinate' in str(error):
-        dimension_pattern = r"'(.*?)'" # The dimension is wrapped in single quotes.
-        dimension_err = re.findall(dimension_pattern, str(error))
-        message = 'Ocurrió un error al generar el gráfico.\n'
-        message += f'Para la variable en uso, la dimensión {dimension_err[0]} no es válida.'
-        raise Exception(message)
-        return
-
-      errror_msg = 'Ocurrió un error al generar el gráfico.'
-      raise Exception(errror_msg)
-
-    img_buffer = self.chart_builder._chart.get_buffer()
+  def __static_success_build_callback(self, chart_builder):
+    print(f'-> Image built.', file=sys.stderr)
+    img_buffer = chart_builder._chart.get_buffer()
     self.chart_img = ImageTk.PhotoImage(Image.open(img_buffer))
     self.chart_img_label.configure(image=self.chart_img)
-    # Hide button to play gif.
-    self.play_chart_btn.pack_forget()
+
+    self.__stop_progress_bar()
+    self.chart_and_btns_frame.pack(fill='both', expand=1)
+    self.play_chart_btn.pack_forget() # Hide button to play gif (only for animations).
+
+  def __static_failure_build_callback(self, err):
+    print('--- An error ocurr while building the chart. ---', file=sys.stderr)
+    print(err, file=sys.stderr)
+
+    err_msg = 'Ocurrió un error al generar el gráfico.\n'
+    if 'is not a valid dimension or coordinate' in str(err):
+      dimension_pattern = r"'(.*?)'" # The dimension is wrapped in single quotes.
+      dimension_err = re.findall(dimension_pattern, str(err))
+      err_msg += f'Para la variable en uso, la dimensión {dimension_err[0]} no es válida.'
+
+    self.__stop_progress_bar()
+    tk.messagebox.showerror(title='Error', message=err_msg)
 
   def __generate_animated_chart(
     self,
@@ -223,64 +230,65 @@ class HeatMapView(TabView):
     start_date,
     end_date
   ):
-    print(f'-> Heatmap gif for "{variable}" variable.')
+    print(f'-> Heatmap gif for "{variable}" variable.', file=sys.stderr)
+    dataset = global_vars.current_project_dataset
     dim_constraints = {
       self.time_dim: slice(start_date, end_date)
     }
     if depth != '':
       dim_constraints[self.depth_dim] = [depth]
 
-    duration_unit = self.duration_unit_dict[duration_unit]
-    duration = int(duration) if duration_unit == 'FRAMES_PER_SECOND' else round(float(duration), 2)
+    self.duration_unit = self.duration_unit_dict[duration_unit]
+    self.duration = int(duration) if self.duration_unit == 'FRAMES_PER_SECOND' else round(float(duration), 2)
 
-    try:
-      self.chart_builder.build_animation(
-        var_name=variable,
-        title=chart_title.strip(),
-        var_label=self.plot_measure_label[variable],
-        dim_constraints=dim_constraints,
-        time_dim_name=self.time_dim,
-        lat_dim_name=self.lat_dim,
-        lon_dim_name=self.lon_dim,
-        duration=duration,
-        duration_unit=duration_unit,
-        color_palette=palette_colors
-      )
-    except Exception as error:
-      print(f'Error: {error}')
+    self.chart_builder = level_chart.AnimatedHeatMapBuilder(
+      dataset=dataset,
+      var_name=variable,
+      title=chart_title.strip(),
+      var_label=self.plot_measure_label[variable],
+      dim_constraints=dim_constraints,
+      time_dim_name=self.time_dim,
+      lat_dim_name=self.lat_dim,
+      lon_dim_name=self.lon_dim,
+      duration=self.duration,
+      duration_unit=self.duration_unit,
+      color_palette=palette_colors
+    )
+    self.chart_builder.build(
+      success_callback=self.__animated_success_build_callback, 
+      failure_callback=self.__animated_failure_build_callback
+    )
 
-      if 'is not a valid dimension or coordinate' in str(error):
-        dimension_pattern = r"'(.*?)'" # The dimension is wrapped in single quotes.
-        dimension_err = re.findall(dimension_pattern, str(error))
-        message = 'Ocurrió un error al generar el gráfico.\n'
-        message += f'Para la variable en uso, la dimensión {dimension_err[0]} no es válida.'
-        raise Exception(message)
-        return
-
-      if 'numpy.nanmin raises on a.size==0 and axis=None' in str(error):
-        message = 'Ocurrió un error al generar el gráfico.\n'
-        message += 'Rango de fechas no disponible, por favor consulte la información '
-        message += 'del dataset respecto a la dimensión de tiempo y su resolución temporal '
-        message += 'en la pestaña de "Información de datos"'
-        raise Exception(message)
-        return
-
-      errror_msg = 'Ocurrió un error al generar el gráfico.'
-      raise Exception(errror_msg)
-
-    gif_buffer = self.chart_builder._chart.get_buffer()
+  def __animated_success_build_callback(self, chart_builder):
+    print(f'-> Image built.', file=sys.stderr)
+    gif_buffer = chart_builder._chart.get_buffer()
     self.gif_images = self.get_gif_frames(gif_buffer)
     self.num_frames = len(self.gif_images)
     self.current_frame = 0
-    if duration_unit == 'SECONDS_PER_FRAME':
-      self.gif_frame_duration_ms = round(duration * 1000)
-    elif duration_unit == 'FRAMES_PER_SECOND':
-      self.gif_frame_duration_ms = round(1000 / duration)
     # Show first frame
     self.chart_img = self.gif_images[0]
     self.chart_img_label.configure(image=self.chart_img)
-    # Show button to play gif.
-    self.play_chart_btn.pack()
+
+    self.__stop_progress_bar()
+    self.chart_and_btns_frame.pack(fill='both', expand=1)
+    self.play_chart_btn.pack() # Show button to play gif.
+
+  def __animated_failure_build_callback(self, err):
+    print('--- An error ocurr while building the chart. ---', file=sys.stderr)
+    print(err, file=sys.stderr)
+    
+    err_msg = 'Ocurrió un error al generar el gráfico.\n'
+    if 'is not a valid dimension or coordinate' in str(err):
+      dimension_pattern = r"'(.*?)'" # The dimension is wrapped in single quotes.
+      dimension_err = re.findall(dimension_pattern, str(err))
+      err_msg += f'Para la variable en uso, la dimensión {dimension_err[0]} no es válida.'
+    elif 'numpy.nanmin raises on a.size==0 and axis=None' in str(err):
+      err_msg += 'Rango de fechas no disponible, por favor consulte la información '
+      err_msg += 'del dataset respecto a la dimensión de tiempo y su resolución temporal '
+      err_msg += 'en la pestaña de "Información de datos"'
+
+    self.__stop_progress_bar()
+    tk.messagebox.showerror(title='Error', message=err_msg)
 
   def __fields_validation(
     self, 
@@ -393,13 +401,8 @@ class HeatMapView(TabView):
       self.__animated_build_method_frame.pack(fill='x')
       self.__static_build_method_frame.pack_forget()
 
-  def __show_and_run_progress_bar(self):
-    # print('se llamo a show progress bar')
-    self.__progress_bar.pack(pady=10)
+  def __start_progress_bar(self):
     self.__progress_bar.start()
 
-  def __stop_and_hide_progress_bar(self):
-    pass
-    # print('se llamo a stop and hide progress bar')
-    # self.__progress_bar.stop()
-    # self.__progress_bar.pack_forget()
+  def __stop_progress_bar(self):
+    self.__progress_bar.stop()

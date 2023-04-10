@@ -1,12 +1,13 @@
 import pathlib
 import re
+import sys
 import tkinter as tk
 import ttkbootstrap as ttk
 import utils.dataset_utils as dataset_utils
 import utils.global_variables as global_vars
 import utils.basic_form_fields as form_fields
 from views.templates.tab_view import TabView
-from omdepplotlib.chart_building import line_chart
+from siaplotlib.chart_building import line_chart
 from PIL import ImageTk, Image
 from datetime import datetime
 
@@ -85,10 +86,10 @@ class SinglePointTimeSeriesView(TabView):
       maximum=40, 
       mode='determinate',
       length=100,
-      value=20,
+      value=0,
       bootstyle='success striped'
     )
-    self.__show_and_run_progress_bar()
+    self.__progress_bar.pack(pady=10)
 
   def __start_creation_chart(
     self,
@@ -100,38 +101,34 @@ class SinglePointTimeSeriesView(TabView):
     start_date,
     end_date
   ):
-    print('-----------------------------')
-    print(f'variable: "{variable}"')
-    print(f'depths: "{depths}"')
-    print(f'chart_title: "{chart_title}"')
-    print(f'longitude: "{longitude}"')
-    print(f'latitude: "{latitude}"')
-    print(f'start_date: "{start_date}"')
-    print(f'end_date: "{end_date}"')
+    print('-----------------------------', file=sys.stderr)
+    print(f'variable: "{variable}"', file=sys.stderr)
+    print(f'depths: "{depths}"', file=sys.stderr)
+    print(f'chart_title: "{chart_title}"', file=sys.stderr)
+    print(f'longitude: "{longitude}"', file=sys.stderr)
+    print(f'latitude: "{latitude}"', file=sys.stderr)
+    print(f'start_date: "{start_date}"', file=sys.stderr)
+    print(f'end_date: "{end_date}"', file=sys.stderr)
 
-    self.__show_and_run_progress_bar()
+    # Hide column 2 with the chart and buttons.
     self.chart_and_btns_frame.pack_forget()
-
+    # Validations.
     dims_and_var_configured = self.dataset_dims_and_vars_validation()
     if not dims_and_var_configured:
       return
-
     valid_fields = self.__fields_validation(variable, depths, chart_title, longitude, latitude, 
       start_date, end_date)
     if not valid_fields:
       return
+    # Start progress bar.
+    self.__start_progress_bar()
 
     try:
-      dataset = global_vars.current_project_dataset
-      self.chart_builder = line_chart.SinglePointTimeSeriesBuilder(dataset=dataset)
-
       self.__generate_static_chart(variable, depths, chart_title, longitude, latitude, 
         start_date, end_date)
-
-      self.__stop_and_hide_progress_bar()
-      self.chart_and_btns_frame.pack(fill='both', expand=1)
-    except Exception as error:
-      tk.messagebox.showerror(title='Error', message=error)
+    except Exception as err:
+      self.__stop_progress_bar()
+      tk.messagebox.showerror(title='Error', message=err)
 
   def __generate_static_chart(
     self,
@@ -143,6 +140,8 @@ class SinglePointTimeSeriesView(TabView):
     start_date,
     end_date
   ):
+    print(f'-> Static Time series image for "{variable}" variable.', file=sys.stderr)
+    dataset = global_vars.current_project_dataset
     date_range = slice(start_date, end_date)
     grouping_dim_name = None
     depths = [float(depth) for depth in depths]
@@ -156,39 +155,45 @@ class SinglePointTimeSeriesView(TabView):
       dim_constraints[self.depth_dim] = depths
       grouping_dim_name = self.depth_dim
 
-    print(f'-> Static Time series image for "{variable}" variable.')
-    try:
-      self.chart_builder.build_static(
-        var_name=variable,
-        title=chart_title.strip(),
-        var_label=self.plot_measure_label[variable],
-        dim_constraints=dim_constraints,
-        lat_dim_name=self.lat_dim,
-        lon_dim_name=self.lon_dim,
-        grouping_dim_label='Depth (m)',
-        grouping_dim_name=grouping_dim_name,
-        time_dim_label='Dates',
-        time_dim_name=self.time_dim,
-      )
-    except Exception as error:
-      print(f'Error: {error}')
+    self.chart_builder = line_chart.SinglePointTimeSeriesBuilder(
+      dataset=dataset,
+      var_name=variable,
+      title=chart_title.strip(),
+      var_label=self.plot_measure_label[variable],
+      dim_constraints=dim_constraints,
+      lat_dim_name=self.lat_dim,
+      lon_dim_name=self.lon_dim,
+      grouping_dim_label='Depth (m)',
+      grouping_dim_name=grouping_dim_name,
+      time_dim_label='Dates',
+      time_dim_name=self.time_dim,
+    )
+    self.chart_builder.build(
+      success_callback=self.__static_success_build_callback, 
+      failure_callback=self.__static_failure_build_callback
+    )
 
-      if 'is not a valid dimension or coordinate' in str(error):
-        dimension_pattern = r"'(.*?)'" # The dimension is wrapped in single quotes.
-        dimension_err = re.findall(dimension_pattern, str(error))
-        message = 'Ocurrió un error al generar el gráfico.\n'
-        message += f'Para la variable en uso, la dimensión {dimension_err[0]} no es válida.'
-        raise Exception(message)
-        return
-
-      errror_msg = 'Ocurrió un error al generar el gráfico.'
-      raise Exception(errror_msg)
-
-    img_buffer = self.chart_builder._chart.get_buffer()
+  def __static_success_build_callback(self, chart_builder):
+    print(f'-> Image built.', file=sys.stderr)
+    img_buffer = chart_builder._chart.get_buffer()
     self.chart_img = ImageTk.PhotoImage(Image.open(img_buffer))
     self.chart_img_label.configure(image=self.chart_img)
-    # Hide button to play gif.
-    self.play_chart_btn.pack_forget()
+
+    self.__stop_progress_bar()
+    self.chart_and_btns_frame.pack(fill='both', expand=1)
+
+  def __static_failure_build_callback(self, err):
+    print('--- An error ocurr while building the chart. ---', file=sys.stderr)
+    print(err, file=sys.stderr)
+
+    err_msg = 'Ocurrió un error al generar el gráfico.\n'
+    if 'is not a valid dimension or coordinate' in str(err):
+      dimension_pattern = r"'(.*?)'" # The dimension is wrapped in single quotes.
+      dimension_err = re.findall(dimension_pattern, str(err))
+      err_msg += f'Para la variable en uso, la dimensión {dimension_err[0]} no es válida.'
+
+    self.__stop_progress_bar()
+    tk.messagebox.showerror(title='Error', message=err_msg)
 
   def __fields_validation(
     self, 
@@ -281,13 +286,8 @@ class SinglePointTimeSeriesView(TabView):
 
     return True
 
-  def __show_and_run_progress_bar(self):
-    # print('se llamo a show progress bar')
-    self.__progress_bar.pack(pady=10)
+  def __start_progress_bar(self):
     self.__progress_bar.start()
 
-  def __stop_and_hide_progress_bar(self):
-    pass
-    # print('se llamo a stop and hide progress bar')
-    # self.__progress_bar.stop()
-    # self.__progress_bar.pack_forget()
+  def __stop_progress_bar(self):
+    self.__progress_bar.stop()

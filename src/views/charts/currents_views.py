@@ -6,7 +6,7 @@ import utils.global_variables as global_vars
 import utils.basic_form_fields as form_fields
 from datetime import datetime
 from views.templates.tab_view import TabView
-from omdepplotlib.chart_building import level_chart
+from siaplotlib.chart_building import level_chart
 from PIL import ImageTk, Image
 
 class CurrentsChartView(TabView):
