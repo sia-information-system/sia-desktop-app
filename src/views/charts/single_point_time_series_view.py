@@ -14,18 +14,11 @@ from datetime import datetime
 class SinglePointTimeSeriesView(TabView):
   def __init__(self, master):
     super().__init__(master, chart_type='TIME_SERIES')
-    self.variable_list = dataset_utils.get_variables()
+    self.variables_long_names = dataset_utils.get_variables_long_names()
+    self.variables_units = dataset_utils.get_variables_units()
     self.depth_list = dataset_utils.get_depth_values()
 
     self.__progress_bar = None
-    # TODO: Revisar de donde sacar lo de los labels.
-    self.plot_measure_label = {
-      'thetao': 'Temperature (C°)',
-      'vo': 'Northward velocity (m/s)',
-      'uo': 'Eastward velocity (m/s)',
-      'so': 'Salinity (PSU)',
-      'zos': 'Sea surface height (m)'
-    }
 
   def load_view(self):
     self.pack(fill='both', expand=1)
@@ -44,7 +37,8 @@ class SinglePointTimeSeriesView(TabView):
     form_entries_frame.pack(fill='x')
 
     label_text = 'Variable:'
-    variable_cb = form_fields.create_combobox_row(form_entries_frame, label_text, self.variable_list)
+    options = list(self.variables_long_names.keys())
+    variable_cb = form_fields.create_combobox_row(form_entries_frame, label_text, options)
 
     label_text = 'Profundidad(es) [m]:'
     depth_cb_list = form_fields.MultipleCombobox(
@@ -142,6 +136,7 @@ class SinglePointTimeSeriesView(TabView):
   ):
     print(f'-> Static Time series image for "{variable}" variable.', file=sys.stderr)
     dataset = global_vars.current_project_dataset
+    variable = self.variables_long_names[variable]
     date_range = slice(start_date, end_date)
     grouping_dim_name = None
     depths = [float(depth) for depth in depths]
@@ -159,7 +154,7 @@ class SinglePointTimeSeriesView(TabView):
       dataset=dataset,
       var_name=variable,
       title=chart_title.strip(),
-      var_label=self.plot_measure_label[variable],
+      var_label=self.variables_units[variable],
       dim_constraints=dim_constraints,
       lat_dim_name=self.lat_dim,
       lon_dim_name=self.lon_dim,
@@ -191,6 +186,8 @@ class SinglePointTimeSeriesView(TabView):
       dimension_pattern = r"'(.*?)'" # The dimension is wrapped in single quotes.
       dimension_err = re.findall(dimension_pattern, str(err))
       err_msg += f'Para la variable en uso, la dimensión {dimension_err[0]} no es válida.'
+    else:
+      err_msg += 'Revisa nuevamente los parámetros de creación del gráfico.'
 
     self.__stop_progress_bar()
     tk.messagebox.showerror(title='Error', message=err_msg)

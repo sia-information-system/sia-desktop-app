@@ -18,7 +18,8 @@ class HeatMapView(TabView):
     self.__static_build_method_frame = None
     self.__animated_build_method_frame = None
 
-    self.variable_list = dataset_utils.get_variables()
+    self.variables_long_names = dataset_utils.get_variables_long_names()
+    self.variables_units = dataset_utils.get_variables_units()
     self.depth_list = dataset_utils.get_depth_values()
     self.duration_unit_dict = {
       'Frames por segundo': 'FRAMES_PER_SECOND',
@@ -26,14 +27,6 @@ class HeatMapView(TabView):
     }
 
     self.__progress_bar = None
-    # TODO: Revisar de donde sacar lo de los labels.
-    self.plot_measure_label = {
-      'thetao': 'Temperature (C°)',
-      'vo': 'Northward velocity (m/s)',
-      'uo': 'Eastward velocity (m/s)',
-      'so': 'Salinity (PSU)',
-      'zos': 'Sea surface height (m)'
-    }
 
   def load_view(self):
     self.pack(fill='both', expand=1)
@@ -57,7 +50,8 @@ class HeatMapView(TabView):
     build_method_cb.bind("<<ComboboxSelected>>", self.__selected_build_method_handler)
 
     label_text = 'Variable:'
-    variable_cb = form_fields.create_combobox_row(form_entries_frame, label_text, self.variable_list)
+    options = list(self.variables_long_names.keys())
+    variable_cb = form_fields.create_combobox_row(form_entries_frame, label_text, options)
 
     label_text = 'Profundidad [m]:'
     options = [''] + self.depth_list
@@ -175,6 +169,7 @@ class HeatMapView(TabView):
   ):
     print(f'-> Heatmap static image for "{variable}" variable.', file=sys.stderr)
     dataset = global_vars.current_project_dataset
+    variable = self.variables_long_names[variable]
     dim_constraints = {
       self.time_dim: [target_date]
     }
@@ -185,7 +180,7 @@ class HeatMapView(TabView):
       dataset=dataset,
       var_name=variable,
       title=chart_title.strip(),
-      var_label=self.plot_measure_label[variable],
+      var_label=self.variables_units[variable],
       dim_constraints=dim_constraints,
       lat_dim_name=self.lat_dim,
       lon_dim_name=self.lon_dim,
@@ -215,6 +210,8 @@ class HeatMapView(TabView):
       dimension_pattern = r"'(.*?)'" # The dimension is wrapped in single quotes.
       dimension_err = re.findall(dimension_pattern, str(err))
       err_msg += f'Para la variable en uso, la dimensión {dimension_err[0]} no es válida.'
+    else:
+      err_msg += 'Revisa nuevamente los parámetros de creación del gráfico.'
 
     self.__stop_progress_bar()
     tk.messagebox.showerror(title='Error', message=err_msg)
@@ -232,6 +229,7 @@ class HeatMapView(TabView):
   ):
     print(f'-> Heatmap gif for "{variable}" variable.', file=sys.stderr)
     dataset = global_vars.current_project_dataset
+    variable = self.variables_long_names[variable]
     dim_constraints = {
       self.time_dim: slice(start_date, end_date)
     }
@@ -245,7 +243,7 @@ class HeatMapView(TabView):
       dataset=dataset,
       var_name=variable,
       title=chart_title.strip(),
-      var_label=self.plot_measure_label[variable],
+      var_label=self.variables_units[variable],
       dim_constraints=dim_constraints,
       time_dim_name=self.time_dim,
       lat_dim_name=self.lat_dim,
@@ -286,6 +284,8 @@ class HeatMapView(TabView):
       err_msg += 'Rango de fechas no disponible, por favor consulte la información '
       err_msg += 'del dataset respecto a la dimensión de tiempo y su resolución temporal '
       err_msg += 'en la pestaña de "Información de datos"'
+    else:
+      err_msg += 'Revisa nuevamente los parámetros de creación del gráfico.'
 
     self.__stop_progress_bar()
     tk.messagebox.showerror(title='Error', message=err_msg)

@@ -44,6 +44,26 @@ def get_latitude_values(name_in_dataset='latitude'):
   latitude_values = dataset.coords[name_in_dataset].values
   return latitude_values
 
+def get_variables_long_names():
+  dataset = global_vars.current_project_dataset
+  variables_long_names = {}
+  for varname, variable in dataset.variables.items():
+    if varname not in dataset.coords:
+      variable_long_name = variable.attrs['long_name']
+      if variable_long_name:
+        variables_long_names[variable_long_name] = varname
+  return variables_long_names
+
+def get_variables_units():
+  dataset = global_vars.current_project_dataset
+  variables_units = {}
+  for varname, variable in dataset.variables.items():
+    if varname not in dataset.coords:
+      unit_long = variable.attrs['unit_long']
+      units = variable.attrs['units']
+      variables_units[varname] = unit_long if unit_long else units
+  return variables_units
+
 def get_dataset_info():
   dataset = global_vars.current_project_dataset
 
