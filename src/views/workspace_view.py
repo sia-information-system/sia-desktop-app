@@ -207,20 +207,20 @@ class WorkspaceView(ttk.Frame):
     new_sheet_window.show()
     sheet_data = new_sheet_window.get_sheet_data()
     if sheet_data['proceed_to_add']:
-      # Add tab to notebook.
-      self.__add_tab(sheet_data['name'], sheet_data['chart_type'])
       # Save worksheet to project.
       prj_mgmt.add_worksheet(self.project_path, sheet_data['name'], sheet_data['chart_type'])
+      # Add tab to notebook.
+      self.__add_tab(self.project_path, sheet_data['name'], sheet_data['chart_type'])
 
-  def __add_tab(self, tab_name, chart_type):
+  def __add_tab(self, project_path, tab_name, chart_type):
     # TODO: Determinar el tipo de gráfico a mostrar en la nueva hoja.
     chart_frame = None
     if chart_type == 'HEATMAP':
-      chart_frame = HeatMapView(self.notebook)
+      chart_frame = HeatMapView(self.notebook, project_path, tab_name)
     elif chart_type == 'CONTOUR_MAP':
-      chart_frame = ContourMapView(self.notebook)
+      chart_frame = ContourMapView(self.notebook, project_path, tab_name)
     elif chart_type == 'TIME_SERIES':
-      chart_frame = SinglePointTimeSeriesView(self.notebook)
+      chart_frame = SinglePointTimeSeriesView(self.notebook, project_path, tab_name)
     elif chart_type == 'CURRENTS_CHART':
       chart_frame = CurrentsChartView(self.notebook)
     elif chart_type == 'WIND_ROSE':
@@ -256,7 +256,7 @@ class WorkspaceView(ttk.Frame):
     for worksheet in worksheets:
       tab_name = worksheet['name']
       chart_type = worksheet['chart_type']
-      self.__add_tab(tab_name, chart_type)
+      self.__add_tab(project_path, tab_name, chart_type)
 
   def __create_empty_project_frame(self):
     frame = ttk.Frame(self)

@@ -48,12 +48,16 @@ def save_project(project_name, dataset_path=None):
   project_dir = pathlib.Path(HOME_PROJECTS_DIR, project_name)
   project_dir.mkdir()
 
+  project_dataset_dir_path = pathlib.Path(project_dir, 'dataset')
+  project_dataset_dir_path.mkdir()
+
+  charts_imgs_dir_path = pathlib.Path(project_dir, 'charts_imgs')
+  charts_imgs_dir_path.mkdir()
+
   # Make a copy of original dataset in HOME_DATASETS_DIR to HOME_PROJECTS_DIR/<Project>/dataset
   project_dataset_filename = None
   
   if user_chose_select_data:
-    project_dataset_dir_path = pathlib.Path(project_dir, 'dataset')
-    project_dataset_dir_path.mkdir()
     project_dataset_filename = 'data' + pathlib.Path(dataset_path).suffix
     project_dataset_path = pathlib.Path(project_dataset_dir_path, project_dataset_filename)
     with open(dataset_path, 'rb') as dataset_file:
@@ -178,7 +182,8 @@ def add_worksheet(project_path, sheet_name, sheet_chart_type):
   sheet_data = {
     'name': sheet_name.strip().lower(),
     'chart_type': sheet_chart_type,
-    'parameters': {}
+    'parameters': {},
+    'chart_img_rel_path': ''
   }
   metadata['worksheets'].append(sheet_data)
 
@@ -192,14 +197,58 @@ def delete_worksheet(project_path, sheet_name):
   with open(project_metadata_path) as json_file:
     metadata = json.load(json_file)
 
+  chart_img_rel_path = ''
   # Find and remove the sheet with the provided name from the worksheets list.
   for sheet in metadata['worksheets']:
     if sheet['name'] == sheet_name.strip().lower():
+      chart_img_rel_path = sheet['chart_img_rel_path']
       metadata['worksheets'].remove(sheet)
       break
 
   # Save updated metadata json in project directory.
   with open(project_metadata_path, 'w') as json_file:
     json.dump(metadata, json_file, indent=2)
+
+  # Delete chart image file.
+  if chart_img_rel_path:
+    img_absolute_path = pathlib.Path(project_path, chart_img_rel_path)
+    filename_to_del = img_absolute_path.stem
+    # Delete all files with the same name (different extensions: .png, .gif).
+    for chart_file in img_absolute_path.parent.glob(filename_to_del + '.*'):
+      chart_file.unlink()
+
+def save_chart_parameters_and_img(project_path, sheet_name, parameters, chart_img_rel_path):
+  # Find the project metadata (json file).
+  project_metadata_path = get_project_metadata_file_path(project_path)
+  with open(project_metadata_path) as json_file:
+    metadata = json.load(json_file)
+
+  # Find and update the sheet with the provided name from the worksheets list.
+  for sheet in metadata['worksheets']:
+    if sheet['name'] == sheet_name.strip().lower():
+      sheet['parameters'] = parameters
+      sheet['chart_img_rel_path'] = chart_img_rel_path
+      break
+
+  # Save updated metadata json in project directory.
+  with open(project_metadata_path, 'w') as json_file:
+    json.dump(metadata, json_file, indent=2)
+
+def get_chart_parameters_and_img(project_path, sheet_name):
+  # Find the project metadata (json file).
+  project_metadata_path = get_project_metadata_file_path(project_path)
+  with open(project_metadata_path) as json_file:
+    metadata = json.load(json_file)
+
+  # Find and update the sheet with the provided name from the worksheets list.
+  for sheet in metadata['worksheets']:
+    if sheet['name'] == sheet_name.strip().lower():
+      return {
+        'parameters': sheet['parameters'],
+        'chart_img_rel_path': sheet['chart_img_rel_path']
+      }
+
+  return {}
+
 
 # -------------------------------------- Configurations -------------------------------------------

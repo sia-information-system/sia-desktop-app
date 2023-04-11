@@ -6,14 +6,18 @@ import ttkbootstrap as ttk
 import utils.dataset_utils as dataset_utils
 import utils.global_variables as global_vars
 import utils.basic_form_fields as form_fields
+import utils.project_manager as prj_mgmt
 from views.templates.tab_view import TabView
 from siaplotlib.chart_building import level_chart
 from PIL import ImageTk, Image
 from datetime import datetime
 
 class HeatMapView(TabView):
-  def __init__(self, master):
+  def __init__(self, master, project_path, worksheet_name):
     super().__init__(master, chart_type='HEATMAP')
+    self.project_path = project_path
+    self.worksheet_name = worksheet_name
+
     self.__build_method = None
     self.__static_build_method_frame = None
     self.__animated_build_method_frame = None
@@ -25,6 +29,8 @@ class HeatMapView(TabView):
       'Frames por segundo': 'FRAMES_PER_SECOND',
       'Segundos por frame': 'SECONDS_PER_FRAME'
     }
+    self.duration_unit = None
+    self.duration = None
 
     self.__progress_bar = None
 
@@ -46,56 +52,62 @@ class HeatMapView(TabView):
 
     label_text = 'Método de construcción:'
     build_method_list = ['Estático', 'Animado']
-    build_method_cb = form_fields.create_combobox_row(form_entries_frame, label_text, build_method_list)
-    build_method_cb.bind("<<ComboboxSelected>>", self.__selected_build_method_handler)
+    self.build_method_cb = form_fields.create_combobox_row(form_entries_frame, label_text, build_method_list)
+    self.build_method_cb.bind("<<ComboboxSelected>>", self.__selected_build_method_handler)
 
     label_text = 'Variable:'
     options = list(self.variables_long_names.keys())
-    variable_cb = form_fields.create_combobox_row(form_entries_frame, label_text, options)
+    self.variable_cb = form_fields.create_combobox_row(form_entries_frame, label_text, options)
 
     label_text = 'Profundidad [m]:'
     options = [''] + self.depth_list
-    depth_cb = form_fields.create_combobox_row(form_entries_frame, label_text, options)
+    self.depth_cb = form_fields.create_combobox_row(form_entries_frame, label_text, options)
 
     label_text = 'Título del gráfico:'
-    chart_title_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+    self.chart_title_entry = form_fields.create_entry_row(form_entries_frame, label_text)
 
     label_text = 'Paleta de colores:'
     palette_colors_list = ['OrRd', 'plasma', 'Greens', 'viridis']
     tooltip_text = 'Consultar Manual de usuario para más información sobre los codigos de los colores.'
-    palette_colors_cb = form_fields.create_combobox_row(form_entries_frame, label_text, palette_colors_list, tooltip_text=tooltip_text)
+    self.palette_colors_cb = form_fields.create_combobox_row(form_entries_frame, label_text, palette_colors_list, tooltip_text=tooltip_text)
 
     # Following entries will be hidden or shown depending on the selected build method.
 
     self.__static_build_method_frame = ttk.Frame(form_entries_frame)
     self.__static_build_method_frame.pack_forget()
     label_text = 'Fecha objetivo:'
-    target_date_entry = form_fields.create_date_entry_row(self.__static_build_method_frame, label_text)
+    self.target_date_entry = form_fields.create_date_entry_row(self.__static_build_method_frame, label_text)
 
     self.__animated_build_method_frame = ttk.Frame(form_entries_frame)
     self.__animated_build_method_frame.pack_forget()
     label_text = 'Unidad de duración:'
     duration_unit_list = list(self.duration_unit_dict.keys())
-    duration_cb = form_fields.create_combobox_row(self.__animated_build_method_frame, label_text, duration_unit_list)
+    self.duration_cb = form_fields.create_combobox_row(self.__animated_build_method_frame, label_text, duration_unit_list)
     label_text = 'Duración'
-    duration_entry = form_fields.create_entry_row(self.__animated_build_method_frame, label_text)
+    self.duration_entry = form_fields.create_entry_row(self.__animated_build_method_frame, label_text)
     label_text = 'Fecha de inicio:'
-    start_date_entry = form_fields.create_date_entry_row(self.__animated_build_method_frame, label_text)
+    self.start_date_entry = form_fields.create_date_entry_row(self.__animated_build_method_frame, label_text)
     label_text = 'Fecha de fin:'
-    end_date_entry = form_fields.create_date_entry_row(self.__animated_build_method_frame, label_text)
+    self.end_date_entry = form_fields.create_date_entry_row(self.__animated_build_method_frame, label_text)
 
+    # Restore previous values from the project file if was configured.
+    self.__restore_params_and_img_if_apply()
 
     # Apply button.
     connect_button = ttk.Button(
       form_frame, 
       text='Generar gráfico', 
       command=lambda: self.__start_creation_chart(
-        build_method_cb.get(),
-        variable_cb.get(), depth_cb.get(),
-        chart_title_entry.get(), palette_colors_cb.get(),
-        target_date=target_date_entry.entry.get(), # Only for static build method.
-        duration_unit=duration_cb.get(), duration=duration_entry.get(), # Only for animated build method.
-        start_date=start_date_entry.entry.get(), end_date=end_date_entry.entry.get() # Only for animated build method.
+        self.build_method_cb.get(),
+        self.variable_cb.get(), 
+        self.depth_cb.get(),
+        self.chart_title_entry.get(), 
+        self.palette_colors_cb.get(),
+        target_date=self.target_date_entry.entry.get(), # Only for static build method.
+        duration_unit=self.duration_cb.get(), 
+        duration=self.duration_entry.get(), # Only for animated build method.
+        start_date=self.start_date_entry.entry.get(), 
+        end_date=self.end_date_entry.entry.get() # Only for animated build method.
       )
     )
     connect_button.pack(pady=10)
@@ -194,8 +206,12 @@ class HeatMapView(TabView):
   def __static_success_build_callback(self, chart_builder):
     print(f'-> Image built.', file=sys.stderr)
     img_buffer = chart_builder._chart.get_buffer()
-    self.chart_img = ImageTk.PhotoImage(Image.open(img_buffer))
-    self.chart_img_label.configure(image=self.chart_img)
+    self.show_static_chart_img(img_buffer)
+
+    chart_img_rel_path = self.save_current_img_chart(self.worksheet_name, '.png')
+    print(f'-> Static chart image saved in "{chart_img_rel_path}"', file=sys.stderr)
+    self.__save_chart_parameters_and_img(chart_img_rel_path)
+    print(f'-> Current state saved. Parameters and chart image', file=sys.stderr)
 
     self.__stop_progress_bar()
     self.chart_and_btns_frame.pack(fill='both', expand=1)
@@ -260,12 +276,12 @@ class HeatMapView(TabView):
   def __animated_success_build_callback(self, chart_builder):
     print(f'-> Image built.', file=sys.stderr)
     gif_buffer = chart_builder._chart.get_buffer()
-    self.gif_images = self.get_gif_frames(gif_buffer)
-    self.num_frames = len(self.gif_images)
-    self.current_frame = 0
-    # Show first frame
-    self.chart_img = self.gif_images[0]
-    self.chart_img_label.configure(image=self.chart_img)
+    self.show_animated_chart_img(gif_buffer, self.duration_unit, self.duration)
+
+    chart_img_rel_path = self.save_current_img_chart(self.worksheet_name, '.gif')
+    print(f'-> Animated chart image saved in "{chart_img_rel_path}"', file=sys.stderr)
+    self.__save_chart_parameters_and_img(chart_img_rel_path)
+    print(f'-> Current state saved. Parameters and chart image', file=sys.stderr)
 
     self.__stop_progress_bar()
     self.chart_and_btns_frame.pack(fill='both', expand=1)
@@ -406,3 +422,57 @@ class HeatMapView(TabView):
 
   def __stop_progress_bar(self):
     self.__progress_bar.stop()
+
+  def __save_chart_parameters_and_img(self, chart_img_rel_path):
+    parameters = {
+      'build_method': self.build_method_cb.get(),
+      'variable': self.variable_cb.get(),
+      'depth': self.depth_cb.get(),
+      'chart_title': self.chart_title_entry.get(),
+      'palette_colors': self.palette_colors_cb.get(),
+      'target_date': self.target_date_entry.entry.get(),
+      'duration_unit': self.duration_cb.get(),
+      'duration': self.duration_entry.get(),
+      'start_date': self.start_date_entry.entry.get(),
+      'end_date': self.end_date_entry.entry.get()
+    }
+
+    prj_mgmt.save_chart_parameters_and_img(self.project_path, self.worksheet_name, parameters, chart_img_rel_path)
+
+  def __restore_params_and_img_if_apply(self):
+    chart_data = prj_mgmt.get_chart_parameters_and_img(self.project_path, self.worksheet_name)
+    parameters = chart_data['parameters']
+    chart_img_rel_path = chart_data['chart_img_rel_path']
+
+    if len(parameters) > 0:
+      self.build_method_cb.set(parameters['build_method'])
+      self.variable_cb.set(parameters['variable'])
+      self.depth_cb.set(parameters['depth'])
+      self.chart_title_entry.insert(0, parameters['chart_title'])
+      self.palette_colors_cb.set(parameters['palette_colors'])
+      self.target_date_entry.entry.delete(0, 'end')
+      self.target_date_entry.entry.insert(0, parameters['target_date'])
+      self.duration_cb.set(parameters['duration_unit'])
+      self.duration_entry.insert(0, parameters['duration'])
+      self.start_date_entry.entry.delete(0, 'end')
+      self.start_date_entry.entry.insert(0, parameters['start_date'])
+      self.end_date_entry.entry.delete(0, 'end')
+      self.end_date_entry.entry.insert(0, parameters['end_date'])
+
+      img_path = pathlib.Path(global_vars.current_project_path, chart_img_rel_path)
+
+      if parameters['build_method'] == 'Estático':
+        self.__build_method = 'static'
+        self.__static_build_method_frame.pack(fill='x')
+
+        self.show_static_chart_img(img_path)
+      else:
+        self.__build_method = 'animated'
+        self.__animated_build_method_frame.pack(fill='x')
+
+        self.show_animated_chart_img(
+          img_path, 
+          self.duration_unit_dict[parameters['duration_unit']], 
+          int(parameters['duration'])
+        )
+        self.play_chart_btn.pack() # Show button to play gif.

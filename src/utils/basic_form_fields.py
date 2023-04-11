@@ -93,6 +93,7 @@ class MultipleCombobox():
     label_width=25,
   ):
     self.combobox_list = []
+    self.group_frame = None
 
     row_frame = ttk.Frame(master)
     row_frame.pack(fill='x', pady=5)
@@ -104,14 +105,13 @@ class MultipleCombobox():
 
     collaps_frame = VerticalCollapsingFrame(row_frame)
     collaps_frame.pack(fill='x', side='right', expand=1)
-    group = ttk.Frame(collaps_frame)
-    collaps_frame.add(child=group, title='Desplegar/Ocultar')
+    self.group_frame = ttk.Frame(collaps_frame)
+    collaps_frame.add(child=self.group_frame, title='Desplegar/Ocultar')
 
     create_cb_btn = ttk.Button(
-      group, 
+      self.group_frame, 
       text='Añadir profundidad', 
-      command=lambda : self.__create_cb(
-        group, 
+      command=lambda : self.add_cb(
         options,
         default_option=default_option, 
         readonly=readonly
@@ -122,6 +122,10 @@ class MultipleCombobox():
     
   def get(self):
     return [depth_cb.get() for depth_cb in self.combobox_list]
+
+  def add_cb(self, options, default_option=None, readonly=True):
+    combobox = self.__create_combobox(self.group_frame, options, default_option=default_option, readonly=readonly)
+    self.combobox_list.append(combobox)
 
   def __create_combobox(self, master, options, default_option=None, readonly=True):
     frame = ttk.Frame(master)
@@ -142,10 +146,6 @@ class MultipleCombobox():
     delete_btn.pack(side='left')
 
     return combobox
-
-  def __create_cb(self, master, options, default_option=None, readonly=True):
-    combobox = self.__create_combobox(master, options, default_option=None, readonly=True)
-    self.combobox_list.append(combobox)
 
   def __delete_cb(self, frame):
     frame_name = frame.winfo_name()

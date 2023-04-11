@@ -6,14 +6,18 @@ import ttkbootstrap as ttk
 import utils.dataset_utils as dataset_utils
 import utils.global_variables as global_vars
 import utils.basic_form_fields as form_fields
+import utils.project_manager as prj_mgmt
 from views.templates.tab_view import TabView
 from siaplotlib.chart_building import line_chart
 from PIL import ImageTk, Image
 from datetime import datetime
 
 class SinglePointTimeSeriesView(TabView):
-  def __init__(self, master):
+  def __init__(self, master, project_path, worksheet_name):
     super().__init__(master, chart_type='TIME_SERIES')
+    self.project_path = project_path
+    self.worksheet_name = worksheet_name
+
     self.variables_long_names = dataset_utils.get_variables_long_names()
     self.variables_units = dataset_utils.get_variables_units()
     self.depth_list = dataset_utils.get_depth_values()
@@ -38,39 +42,45 @@ class SinglePointTimeSeriesView(TabView):
 
     label_text = 'Variable:'
     options = list(self.variables_long_names.keys())
-    variable_cb = form_fields.create_combobox_row(form_entries_frame, label_text, options)
+    self.variable_cb = form_fields.create_combobox_row(form_entries_frame, label_text, options)
 
     label_text = 'Profundidad(es) [m]:'
-    depth_cb_list = form_fields.MultipleCombobox(
+    self.depth_cb_list = form_fields.MultipleCombobox(
       form_entries_frame, 
       label_text, 
       self.depth_list, 
-      readonly=False
+      readonly=True
     )
 
     label_text = 'Título del gráfico:'
-    chart_title_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+    self.chart_title_entry = form_fields.create_entry_row(form_entries_frame, label_text)
 
     label_text = 'Longitud:'
-    longitude_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+    self.longitude_entry = form_fields.create_entry_row(form_entries_frame, label_text)
 
     label_text = 'Latitud: '
-    latitude_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+    self.latitude_entry = form_fields.create_entry_row(form_entries_frame, label_text)
 
     label_text = 'Fecha de inicio:'
-    start_date_entry = form_fields.create_date_entry_row(form_entries_frame, label_text)
+    self.start_date_entry = form_fields.create_date_entry_row(form_entries_frame, label_text)
     label_text = 'Fecha de fin:'
-    end_date_entry = form_fields.create_date_entry_row(form_entries_frame, label_text)
+    self.end_date_entry = form_fields.create_date_entry_row(form_entries_frame, label_text)
 
+    # Restore previous values from the project file if was configured.
+    self.__restore_params_and_img_if_apply()
 
     # Apply button.
     connect_button = ttk.Button(
       form_frame, 
       text='Generar gráfico', 
       command=lambda: self.__start_creation_chart(
-        variable_cb.get(), depth_cb_list.get(),
-        chart_title_entry.get(), longitude_entry.get(), latitude_entry.get(),
-        start_date=start_date_entry.entry.get(), end_date=end_date_entry.entry.get() 
+        self.variable_cb.get(), 
+        self.depth_cb_list.get(),
+        self.chart_title_entry.get(), 
+        self.longitude_entry.get(), 
+        self.latitude_entry.get(),
+        start_date=self.start_date_entry.entry.get(), 
+        end_date=self.end_date_entry.entry.get() 
       )
     )
     connect_button.pack(pady=10)
@@ -171,8 +181,12 @@ class SinglePointTimeSeriesView(TabView):
   def __static_success_build_callback(self, chart_builder):
     print(f'-> Image built.', file=sys.stderr)
     img_buffer = chart_builder._chart.get_buffer()
-    self.chart_img = ImageTk.PhotoImage(Image.open(img_buffer))
-    self.chart_img_label.configure(image=self.chart_img)
+    self.show_static_chart_img(img_buffer)
+
+    chart_img_rel_path = self.save_current_img_chart(self.worksheet_name, '.png')
+    print(f'-> Static chart image saved in "{chart_img_rel_path}"', file=sys.stderr)
+    self.__save_chart_parameters_and_img(chart_img_rel_path)
+    print(f'-> Current state saved. Parameters and chart image', file=sys.stderr)
 
     self.__stop_progress_bar()
     self.chart_and_btns_frame.pack(fill='both', expand=1)
@@ -288,3 +302,36 @@ class SinglePointTimeSeriesView(TabView):
 
   def __stop_progress_bar(self):
     self.__progress_bar.stop()
+
+  def __save_chart_parameters_and_img(self, chart_img_rel_path):
+    parameters = {
+      'variable': self.variable_cb.get(),
+      'depths': self.depth_cb_list.get(),
+      'chart_title': self.chart_title_entry.get(),
+      'longitude': self.longitude_entry.get(),
+      'latitude': self.latitude_entry.get(),
+      'start_date': self.start_date_entry.entry.get(),
+      'end_date': self.end_date_entry.entry.get()
+    }
+
+    prj_mgmt.save_chart_parameters_and_img(self.project_path, self.worksheet_name, parameters, chart_img_rel_path)
+
+  def __restore_params_and_img_if_apply(self):
+    chart_data = prj_mgmt.get_chart_parameters_and_img(self.project_path, self.worksheet_name)
+    parameters = chart_data['parameters']
+    chart_img_rel_path = chart_data['chart_img_rel_path']
+
+    if len(parameters) > 0:
+      self.variable_cb.set(parameters['variable'])
+      for depth in parameters['depths']:
+        self.depth_cb_list.add_cb(self.depth_list, default_option=depth)
+      self.chart_title_entry.insert(0, parameters['chart_title'])
+      self.longitude_entry.insert(0, parameters['longitude'])
+      self.latitude_entry.insert(0, parameters['latitude'])
+      self.start_date_entry.entry.delete(0, 'end')
+      self.start_date_entry.entry.insert(0, parameters['start_date'])
+      self.end_date_entry.entry.delete(0, 'end')
+      self.end_date_entry.entry.insert(0, parameters['end_date'])
+
+      img_path = pathlib.Path(global_vars.current_project_path, chart_img_rel_path)
+      self.show_static_chart_img(img_path)

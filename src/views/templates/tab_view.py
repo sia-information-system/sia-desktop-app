@@ -2,7 +2,7 @@ import tkinter as tk
 import ttkbootstrap as ttk
 from ttkbootstrap.scrolled import ScrolledFrame
 import pathlib
-from utils.global_constants import ASSETS_DIR
+from utils.global_constants import ASSETS_DIR, HOME_PROJECTS_DIR
 import utils.global_variables as global_vars
 from PIL import ImageTk, Image
 
@@ -25,15 +25,15 @@ class TabView(ttk.Frame):
     self.col2_real_values_frame = None
     self.__col3_chart = None
     self.chart_and_btns_frame = None
-    self.chart_img = None
-    self.chart_img_label = None
+    self.__chart_img = None
+    self.__chart_img_label = None
 
-    self.gif_images = []
-    self.current_frame = 0
-    self.num_frames = None
     self.play_chart_btn = None
-    self.duration_unit = None
-    self.duration = None
+    self.__gif_images = []
+    self.__current_frame = 0
+    self.__num_frames = None
+    self.__duration_unit = None
+    self.__duration = None
 
     self.chart_builder = None
 
@@ -91,15 +91,15 @@ class TabView(ttk.Frame):
       example_chart_img_path = pathlib.Path(ASSETS_DIR, 'images', 'heatmap-example.png')
 
     img = Image.open(example_chart_img_path)
-    img_resized = self.resize_chart_img(img)
-    self.chart_img = ImageTk.PhotoImage(img_resized)
-    self.chart_img_label = ttk.Label(self.chart_and_btns_frame, image=self.chart_img)
-    self.chart_img_label.pack(pady=(10, 0))
+    img_resized = self.__resize_chart_img(img)
+    self.__chart_img = ImageTk.PhotoImage(img_resized)
+    self.__chart_img_label = ttk.Label(self.chart_and_btns_frame, image=self.__chart_img)
+    self.__chart_img_label.pack(pady=(10, 0))
 
     save_chart_btn = ttk.Button(
       self.chart_and_btns_frame, 
       text='Guardar gráfico', 
-      command=self.__save_chart,
+      command=self.__save_chart_in_selected_path,
       width=20,
       bootstyle='primary'
     )
@@ -111,25 +111,6 @@ class TabView(ttk.Frame):
       width=20,
       bootstyle='success'
     )
-
-  def get_gif_frames(self, gif_buffer):
-    frames = []
-    with Image.open(gif_buffer) as im:
-      try:
-        while True:
-          frames.append(im.copy())
-          im.seek(len(frames))  # Skip to next frame
-      except EOFError:
-        pass  # End of frames
-
-    # Convert PIL Image objects to PhotoImage objects
-    return [ImageTk.PhotoImage(frame) for frame in frames]
-
-  def resize_chart_img(self, chart_img):
-    max_height = 600 # TODO: Tamaño adecudo creo que 500
-    original_width, original_height = chart_img.size
-    new_width = int(original_width * max_height / original_height)
-    return chart_img.resize((new_width, max_height), Image.ANTIALIAS)
 
   def dataset_dims_and_vars_validation(self):
     # Check one dimension is enough to validate if dimensions and variables are configured.
@@ -143,6 +124,33 @@ class TabView(ttk.Frame):
 
     return True
 
+  def save_current_img_chart(self, worksheet_name, extension):
+    # Worksheet name is unique so we can use it as the image name.
+    filename = worksheet_name.strip().lower()
+    img_file = f'{filename}{extension}'
+    img_path_from_project_root = f'charts_imgs/{img_file}'
+    absolute_img_path = pathlib.Path(global_vars.current_project_path, img_path_from_project_root)
+    self.chart_builder.save(absolute_img_path)
+
+    return img_path_from_project_root
+
+  def show_static_chart_img(self, img_path_or_buffer):
+    img = Image.open(img_path_or_buffer)
+    # img_resized = self.__resize_chart_img(img)
+    self.__chart_img = ImageTk.PhotoImage(img)
+    self.__chart_img_label.configure(image=self.__chart_img)
+
+  def show_animated_chart_img(self, img_path_or_buffer, duration_unit, duration):
+    self.__duration_unit = duration_unit
+    self.__duration = duration
+
+    self.__gif_images = self.__get_gif_frames(img_path_or_buffer)
+    self.__num_frames = len(self.__gif_images)
+    self.__current_frame = 0
+    # Show first frame
+    self.__chart_img = self.__gif_images[0]
+    self.__chart_img_label.configure(image=self.__chart_img)
+
   def __toggle_column(self, event):
     if self.__col2_params.winfo_ismapped():
       self.__col2_params.grid_remove()
@@ -151,30 +159,50 @@ class TabView(ttk.Frame):
       self.__col2_params.grid(row=0, column=1, sticky='nsew')
       self.__arrow_label.configure(text='⬅')
 
+  def __resize_chart_img(self, __chart_img):
+    max_height = 600 # TODO: Tamaño adecudo creo que 500
+    original_width, original_height = __chart_img.size
+    new_width = int(original_width * max_height / original_height)
+    return __chart_img.resize((new_width, max_height), Image.ANTIALIAS)
+
+  def __get_gif_frames(self, gif_buffer):
+    frames = []
+    with Image.open(gif_buffer) as im:
+      try:
+        while True:
+          frames.append(im.copy())
+          im.seek(len(frames))  # Skip to next frame
+      except EOFError:
+        pass  # End of frames
+
+    # Convert PIL Image objects to PhotoImage objects
+    return [ImageTk.PhotoImage(frame) for frame in frames]
+
   def __start_gif(self):
     self.play_chart_btn['state'] = 'disabled'
     self.__play_gif()
   
   def __play_gif(self):
     # Update image label with current frame.
-    self.chart_img = self.gif_images[self.current_frame]
-    self.chart_img_label.configure(image=self.chart_img)
+    self.__chart_img = self.__gif_images[self.__current_frame]
+    self.__chart_img_label.configure(image=self.__chart_img)
     # Update current frame.
-    self.current_frame = (self.current_frame + 1)
-    if self.current_frame >= self.num_frames:
-      self.current_frame = 0
+    self.__current_frame = (self.__current_frame + 1)
+    if self.__current_frame >= self.__num_frames:
+      self.__current_frame = 0
       self.play_chart_btn['state'] = 'normal'
       return
 
-    if self.duration_unit == 'SECONDS_PER_FRAME':
-      gif_frame_duration_ms = round(self.duration * 1000)
-    elif self.duration_unit == 'FRAMES_PER_SECOND':
-      gif_frame_duration_ms = round(1000 / self.duration)
+    if self.__duration_unit == 'SECONDS_PER_FRAME':
+      gif_frame_duration_ms = round(self.__duration * 1000)
+    elif self.__duration_unit == 'FRAMES_PER_SECOND':
+      gif_frame_duration_ms = round(1000 / self.__duration)
 
     # Recursive.
     self.after(gif_frame_duration_ms, self.__play_gif)
 
-  def __save_chart(self):
+  def __save_chart_in_selected_path(self):
+    # TODO: Revisar caso donde el usaurio carga el proyecto, se muestran la imagenes pero no se puede descargar porque no hay chart_builder cargado, ¿esta bien eso o leer de la imagen guardada en charts_imgs?
     # Avoid save examples charts.
     if not self.chart_builder:
       return
