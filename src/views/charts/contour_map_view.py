@@ -188,7 +188,7 @@ class ContourMapView(TabView):
   ):
     print(f'-> ContourMap static image for "{variable}" variable.', file=sys.stderr)
     dataset = global_vars.current_project_dataset
-    variable = self.variables_long_names[variable]
+    var_name = self.variables_long_names[variable]
     dim_constraints = {
       self.time_dim: [target_date]
     }
@@ -197,9 +197,9 @@ class ContourMapView(TabView):
 
     self.chart_builder = level_chart.StaticContourMapBuilder(
       dataset=dataset,
-      var_name=variable,
+      var_name=var_name,
       title=chart_title.strip(),
-      var_label=self.variables_units[variable],
+      var_label=f'{variable} [{self.variables_units[var_name]}]',
       dim_constraints=dim_constraints,
       lat_dim_name=self.lat_dim,
       lon_dim_name=self.lon_dim,
@@ -254,7 +254,7 @@ class ContourMapView(TabView):
   ):
     print(f'-> ContourMap gif for "{variable}" variable.', file=sys.stderr)
     dataset = global_vars.current_project_dataset
-    variable = self.variables_long_names[variable]
+    var_name = self.variables_long_names[variable]
     dim_constraints = {
       self.time_dim: slice(start_date, end_date)
     }
@@ -266,9 +266,9 @@ class ContourMapView(TabView):
 
     self.chart_builder = level_chart.AnimatedContourMapBuilder(
       dataset=dataset,
-      var_name=variable,
+      var_name=var_name,
       title=chart_title.strip(),
-      var_label=self.variables_units[variable],
+      var_label=f'{variable} [{self.variables_units[var_name]}]',
       dim_constraints=dim_constraints,
       time_dim_name=self.time_dim,
       lat_dim_name=self.lat_dim,

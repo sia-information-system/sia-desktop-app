@@ -59,10 +59,28 @@ def get_variables_units():
   variables_units = {}
   for varname, variable in dataset.variables.items():
     if varname not in dataset.coords:
-      unit_long = variable.attrs['unit_long']
-      units = variable.attrs['units']
-      variables_units[varname] = unit_long if unit_long else units
+      var_attrs = variable.attrs
+      if 'unit_long' in var_attrs:
+        variables_units[varname] = var_attrs['unit_long']
+      elif 'units' in var_attrs:
+        variables_units[varname] = var_attrs['units']
+      else:
+        variables_units[varname] = 'NA'
   return variables_units
+
+def get_dimensions_units():
+  dataset = global_vars.current_project_dataset
+  dims_units = {}
+  for dim in dataset.dims:
+    if dim in dataset.coords:
+      dim_attrs = dataset.coords[dim].attrs
+      if 'unit_long' in dim_attrs:
+        dims_units[dim] = dim_attrs['unit_long']
+      elif 'units' in dim_attrs:
+        dims_units[dim] = dim_attrs['units']
+      else:
+        dims_units[dim] = 'NA'
+  return dims_units
 
 def get_dataset_info():
   dataset = global_vars.current_project_dataset

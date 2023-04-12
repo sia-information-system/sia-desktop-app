@@ -181,7 +181,7 @@ class HeatMapView(TabView):
   ):
     print(f'-> Heatmap static image for "{variable}" variable.', file=sys.stderr)
     dataset = global_vars.current_project_dataset
-    variable = self.variables_long_names[variable]
+    var_name = self.variables_long_names[variable]
     dim_constraints = {
       self.time_dim: [target_date]
     }
@@ -190,9 +190,9 @@ class HeatMapView(TabView):
 
     self.chart_builder = level_chart.StaticHeatMapBuilder(
       dataset=dataset,
-      var_name=variable,
+      var_name=var_name,
       title=chart_title.strip(),
-      var_label=self.variables_units[variable],
+      var_label=f'{variable} [{self.variables_units[var_name]}]',
       dim_constraints=dim_constraints,
       lat_dim_name=self.lat_dim,
       lon_dim_name=self.lon_dim,
@@ -245,7 +245,7 @@ class HeatMapView(TabView):
   ):
     print(f'-> Heatmap gif for "{variable}" variable.', file=sys.stderr)
     dataset = global_vars.current_project_dataset
-    variable = self.variables_long_names[variable]
+    var_name = self.variables_long_names[variable]
     dim_constraints = {
       self.time_dim: slice(start_date, end_date)
     }
@@ -257,9 +257,9 @@ class HeatMapView(TabView):
 
     self.chart_builder = level_chart.AnimatedHeatMapBuilder(
       dataset=dataset,
-      var_name=variable,
+      var_name=var_name,
       title=chart_title.strip(),
-      var_label=self.variables_units[variable],
+      var_label=f'{variable} [{self.variables_units[var_name]}]',
       dim_constraints=dim_constraints,
       time_dim_name=self.time_dim,
       lat_dim_name=self.lat_dim,

@@ -87,6 +87,8 @@ class TabView(ttk.Frame):
       example_chart_img_path = pathlib.Path(ASSETS_DIR, 'images', 'currents-chart-example.png')
     elif self.chart_type == 'WIND_ROSE':
       example_chart_img_path = pathlib.Path(ASSETS_DIR, 'images', 'windrose-example.png')
+    elif self.chart_type == 'VERTICAL_PROFILE':
+      example_chart_img_path = pathlib.Path(ASSETS_DIR, 'images', 'vertical-profile-example.png')
     else:
       example_chart_img_path = pathlib.Path(ASSETS_DIR, 'images', 'heatmap-example.png')
 

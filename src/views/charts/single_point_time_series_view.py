@@ -146,7 +146,7 @@ class SinglePointTimeSeriesView(TabView):
   ):
     print(f'-> Static Time series image for "{variable}" variable.', file=sys.stderr)
     dataset = global_vars.current_project_dataset
-    variable = self.variables_long_names[variable]
+    var_name = self.variables_long_names[variable]
     date_range = slice(start_date, end_date)
     grouping_dim_name = None
     depths = [float(depth) for depth in depths]
@@ -162,9 +162,9 @@ class SinglePointTimeSeriesView(TabView):
 
     self.chart_builder = line_chart.SinglePointTimeSeriesBuilder(
       dataset=dataset,
-      var_name=variable,
+      var_name=var_name,
       title=chart_title.strip(),
-      var_label=self.variables_units[variable],
+      var_label=f'{variable} [{self.variables_units[var_name]}]',
       dim_constraints=dim_constraints,
       lat_dim_name=self.lat_dim,
       lon_dim_name=self.lon_dim,

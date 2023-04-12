@@ -11,6 +11,7 @@ from views.charts.contour_map_view import ContourMapView
 from views.charts.single_point_time_series_view import SinglePointTimeSeriesView
 from views.charts.currents_views import CurrentsChartView
 from views.charts.wind_rose_view import WindRoseView
+from views.charts.single_point_vertical_profile_view import SinglePointVerticalProfileView
 
 # Docs for QueryDialog: https://ttkbootstrap.readthedocs.io/en/latest/api/dialogs/querydialog/
 class NewSheetDialogBox(QueryDialog):
@@ -26,7 +27,7 @@ class NewSheetDialogBox(QueryDialog):
       'Gráfica de corrientes': 'CURRENTS_CHART',
       'Rosa de los vientos': 'WIND_ROSE',
       # 'Corte vertical/horizontal': 'VERTICAL/HORIZONTAL_SLICE',
-      # 'Perfil vertical': 'VERTICAL_PROFILE'
+      'Perfil vertical': 'VERTICAL_PROFILE'
     }
 
   def create_body(self, master):
@@ -225,6 +226,9 @@ class WorkspaceView(ttk.Frame):
       chart_frame = CurrentsChartView(self.notebook)
     elif chart_type == 'WIND_ROSE':
       chart_frame = WindRoseView(self.notebook)
+    elif chart_type == 'VERTICAL_PROFILE':
+      chart_frame = SinglePointVerticalProfileView(self.notebook, project_path, tab_name)
+
     chart_frame.load_view()
 
     result_add = self.notebook.add(chart_frame, text=tab_name)

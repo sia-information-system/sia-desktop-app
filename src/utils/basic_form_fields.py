@@ -156,3 +156,80 @@ class MultipleCombobox():
         self.combobox_list.remove(combobox)
         break
     frame.destroy()
+
+class MultipleDateEntries():
+  def __init__(
+    self,
+    master, 
+    label_text, 
+    label_width=25,
+  ):
+    self.date_entry_list = []
+    self.group_frame = None
+
+    row_frame = ttk.Frame(master)
+    row_frame.pack(fill='x', pady=5)
+
+    label_frame = ttk.Frame(row_frame)
+    label_frame.pack(fill='x', side='left')
+    title_label = ttk.Label(label_frame, text=label_text, width=label_width)
+    title_label.pack(fill='x')
+
+    collaps_frame = VerticalCollapsingFrame(row_frame)
+    collaps_frame.pack(fill='x', side='right', expand=1)
+    self.group_frame = ttk.Frame(collaps_frame)
+    collaps_frame.add(child=self.group_frame, title='Desplegar/Ocultar')
+
+    create_date_row_frame = ttk.Frame(self.group_frame)
+    create_date_row_frame.pack(fill='x', padx=(20, 0), pady=(5, 0))
+
+    create_date_entry_btn = ttk.Button(
+      create_date_row_frame, 
+      text='Añadir fecha', 
+      command=self.add_date_entry,
+      bootstyle='dark'
+    )
+    create_date_entry_btn.pack(fill='x', side='left', expand=1)
+
+    tooltip_label = ttk.Label(create_date_row_frame, text='Info')
+    tooltip_label.pack(side='right', padx=10)
+    tooltip_text = 'Para cada fecha, si no existe la fecha especificada se usara la mas cercana.\n'
+    tooltip_text += 'La gráfica le mostrara los valores reales de las fechas usadas.\n'
+    tooltip_text += 'Si 2 o más fechas usan un valor más cercano en común solo se mostrará 1 linea.'
+    ttk.tooltip.ToolTip(tooltip_label, text=tooltip_text, bootstyle='info-inverse')
+    
+  def get(self):
+    return [date_entry.entry.get() for date_entry in self.date_entry_list]
+
+  def add_date_entry(self, default_date=''):
+    date_entry = self.__create_date_entry(self.group_frame, default_date)
+    self.date_entry_list.append(date_entry)
+
+  def __create_date_entry(self, master, default_date=''):
+    frame = ttk.Frame(master)
+    frame.pack(fill='x', padx=(20, 0), pady=(5, 0))
+
+    date_entry = ttk.DateEntry(frame, dateformat='%Y-%m-%d')
+    date_entry.pack(side='left', fill='x', expand=1, padx=(0, 20))
+    date_entry.entry.delete(0, 'end')
+    date_entry.entry.insert(0, default_date)
+
+    delete_btn = ttk.Button(
+      frame, 
+      text='Eliminar', 
+      command=lambda : self.__delete_date_entry(frame), 
+      bootstyle='danger'
+    )
+    delete_btn.pack(side='left')
+
+    return date_entry
+
+  def __delete_date_entry(self, frame):
+    frame_name = frame.winfo_name()
+    for date_entry in self.date_entry_list:
+      date_entry_parent_name = date_entry.winfo_parent().split('.')[-1]
+      if date_entry_parent_name == frame_name:
+        date_entry.destroy()
+        self.date_entry_list.remove(date_entry)
+        break
+    frame.destroy()
