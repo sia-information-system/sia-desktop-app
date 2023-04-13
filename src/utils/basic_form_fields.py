@@ -43,20 +43,36 @@ def create_entry_row(
   label_text,
   label_width=25,
   entry_width=None,
-  show=None
+  show=None,
+  tooltip_text=None,
+  label_string_var=None
 ):
   row_frame = ttk.Frame(master, bootstyle='default')
   row_frame.pack(fill='x', pady=5)
 
   label_frame = ttk.Frame(row_frame)
   label_frame.pack(fill='x', side='left')
-  title_label = ttk.Label(label_frame, text=label_text, width=label_width)
+  title_label = None
+  if not label_string_var:
+    title_label = ttk.Label(label_frame, text=label_text, width=label_width)
+  else:
+    title_label = ttk.Label(label_frame, textvariable=label_string_var, width=label_width)
   title_label.pack(fill='x')
 
   entry_frame = ttk.Frame(row_frame)
   entry_frame.pack(fill='x', side='right', expand=1)
   entry = ttk.Entry(entry_frame, width=entry_width, show=show)
-  entry.pack(fill='x')
+  # entry.pack(fill='x')
+
+  # If user do not want to add a tooltip, then the entry is packed directly.
+  if not tooltip_text:
+    entry.pack(fill='x')
+  else:
+    entry.pack(fill='x', side='left', expand=1)
+
+    tooltip_label = ttk.Label(entry_frame, text='Info')
+    tooltip_label.pack(side='right', padx=10)
+    ttk.tooltip.ToolTip(tooltip_label, text=tooltip_text, bootstyle='info-inverse')
 
   return entry
 

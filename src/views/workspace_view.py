@@ -12,6 +12,7 @@ from views.charts.single_point_time_series_view import SinglePointTimeSeriesView
 from views.charts.currents_views import CurrentsChartView
 from views.charts.wind_rose_view import WindRoseView
 from views.charts.single_point_vertical_profile_view import SinglePointVerticalProfileView
+from views.charts.vertical_slice_view import VerticalSliceView
 
 # Docs for QueryDialog: https://ttkbootstrap.readthedocs.io/en/latest/api/dialogs/querydialog/
 class NewSheetDialogBox(QueryDialog):
@@ -26,8 +27,8 @@ class NewSheetDialogBox(QueryDialog):
       'Serie de tiempo': 'TIME_SERIES',
       'Gráfica de corrientes': 'CURRENTS_CHART',
       'Rosa de los vientos': 'WIND_ROSE',
-      # 'Corte vertical/horizontal': 'VERTICAL/HORIZONTAL_SLICE',
-      'Perfil vertical': 'VERTICAL_PROFILE'
+      'Perfil vertical': 'VERTICAL_PROFILE',
+      'Corte vertical': 'VERTICAL_SLICE',
     }
 
   def create_body(self, master):
@@ -214,7 +215,6 @@ class WorkspaceView(ttk.Frame):
       self.__add_tab(self.project_path, sheet_data['name'], sheet_data['chart_type'])
 
   def __add_tab(self, project_path, tab_name, chart_type):
-    # TODO: Determinar el tipo de gráfico a mostrar en la nueva hoja.
     chart_frame = None
     if chart_type == 'HEATMAP':
       chart_frame = HeatMapView(self.notebook, project_path, tab_name)
@@ -228,6 +228,8 @@ class WorkspaceView(ttk.Frame):
       chart_frame = WindRoseView(self.notebook)
     elif chart_type == 'VERTICAL_PROFILE':
       chart_frame = SinglePointVerticalProfileView(self.notebook, project_path, tab_name)
+    elif chart_type == 'VERTICAL_SLICE':
+      chart_frame = VerticalSliceView(self.notebook, project_path, tab_name)
 
     chart_frame.load_view()
 
