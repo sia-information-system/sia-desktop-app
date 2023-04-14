@@ -13,6 +13,8 @@ class CurrentsChartView(TabView):
   def __init__(self, master):
     super().__init__(master, chart_type='CURRENTS_CHART')
     self.depth_list = dataset_utils.get_depth_values()
+    self.dataset_lon_values = dataset_utils.get_longitude_values()
+    self.dataset_lat_values = dataset_utils.get_latitude_values()
 
     self.__progress_bar = None
 
@@ -216,10 +218,8 @@ class CurrentsChartView(TabView):
         tk.messagebox.showerror(title='Error', message=message)
         return False
 
-      dataset_lon_values = dataset_utils.get_longitude_values()
-      min_dataset_lon, max_dataset_lon = min(dataset_lon_values), max(dataset_lon_values)
-      dataset_lat_values = dataset_utils.get_latitude_values()
-      min_dataset_lat, max_dataset_lat = min(dataset_lat_values), max(dataset_lat_values)
+      min_dataset_lon, max_dataset_lon = min(self.dataset_lon_values), max(self.dataset_lon_values)
+      min_dataset_lat, max_dataset_lat = min(self.dataset_lat_values), max(self.dataset_lat_values)
 
       if lon_max < min_dataset_lon or lon_min > max_dataset_lon or \
         lat_max < min_dataset_lat or lat_min > max_dataset_lat:

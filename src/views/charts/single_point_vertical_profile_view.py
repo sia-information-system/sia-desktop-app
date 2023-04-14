@@ -21,6 +21,8 @@ class SinglePointVerticalProfileView(TabView):
     self.variables_long_names = dataset_utils.get_variables_long_names()
     self.variables_units = dataset_utils.get_variables_units()
     self.dimensions_units = dataset_utils.get_dimensions_units()
+    self.dataset_lon_values = dataset_utils.get_longitude_values()
+    self.dataset_lat_values = dataset_utils.get_latitude_values()
 
     self.__progress_bar = None
 
@@ -205,10 +207,9 @@ class SinglePointVerticalProfileView(TabView):
       point_lon = float(longitude)
       point_lat = float(latitude)
 
-      dataset_lon_values = dataset_utils.get_longitude_values()
-      min_dataset_lon, max_dataset_lon = min(dataset_lon_values), max(dataset_lon_values)
-      dataset_lat_values = dataset_utils.get_latitude_values()
-      min_dataset_lat, max_dataset_lat = min(dataset_lat_values), max(dataset_lat_values)
+      min_dataset_lon, max_dataset_lon = min(self.dataset_lon_values), max(self.dataset_lon_values)
+      min_dataset_lat, max_dataset_lat = min(self.dataset_lat_values), max(self.dataset_lat_values)
+
       if point_lon < min_dataset_lon or point_lon > max_dataset_lon or \
         point_lat < min_dataset_lat or point_lat > max_dataset_lat:
         message = 'La longitud y la latitud deben estar dentro del rango del dataset.\n'

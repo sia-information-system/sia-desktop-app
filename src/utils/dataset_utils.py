@@ -22,6 +22,9 @@ def get_variables():
         variables_only.remove(coord)
   return variables_only
 
+# FIXME: Antes de crear una nueva hoja, se debe validar que las variables y dimensiones
+# esten configuradas. Quitar esta validacion de cada clase de grafica.
+
 def get_depth_values(name_in_dataset='depth'):
   dataset = global_vars.current_project_dataset
   depth_values = dataset.coords[name_in_dataset].values

@@ -28,6 +28,9 @@ class VerticalSliceView(TabView):
     self.variables_long_names = dataset_utils.get_variables_long_names()
     self.variables_units = dataset_utils.get_variables_units()
     self.dimensions_units = dataset_utils.get_dimensions_units()
+    self.dataset_lon_values = dataset_utils.get_longitude_values()
+    self.dataset_lat_values = dataset_utils.get_latitude_values()
+    self.dataset_date_values = dataset_utils.get_time_values()
 
     self.duration_unit_dict = {
       'Frames por segundo': 'FRAMES_PER_SECOND',
@@ -66,14 +69,18 @@ class VerticalSliceView(TabView):
 
     # Start by default with latitude as axis to cut.
     self.__axis_to_cut = 'latitude'
+    min_dataset_lat = min(self.dataset_lat_values)
+    max_dataset_lat = max(self.dataset_lat_values)
 
     label_text = 'Valor mínimo del eje a cortar:'
     self.__min_axis_cut_label_var.set('Latitud mínima:')
     self.min_axis_cut_entry = form_fields.create_entry_row(form_entries_frame, label_text, label_string_var=self.__min_axis_cut_label_var)
+    self.min_axis_cut_entry.insert(0, min_dataset_lat)
 
     label_text = 'Valor máximo del eje a cortar:'
     self.__max_axis_cut_label_var.set('Latitud máxima:')
     self.max_axis_cut_entry = form_fields.create_entry_row(form_entries_frame, label_text, label_string_var=self.__max_axis_cut_label_var)
+    self.max_axis_cut_entry.insert(0, max_dataset_lat)
 
     label_text = 'Valor del eje restante:'
     self.__other_axis_label_var.set('Longitud:')
@@ -100,15 +107,25 @@ class VerticalSliceView(TabView):
 
     self.__animated_build_method_frame = ttk.Frame(form_entries_frame)
     self.__animated_build_method_frame.pack_forget()
+
     label_text = 'Unidad de duración:'
     duration_unit_list = list(self.duration_unit_dict.keys())
     self.duration_cb = form_fields.create_combobox_row(self.__animated_build_method_frame, label_text, duration_unit_list)
+
     label_text = 'Duración'
     self.duration_entry = form_fields.create_entry_row(self.__animated_build_method_frame, label_text)
+
+    min_dataset_date = min(self.dataset_date_values).date()
     label_text = 'Fecha de inicio:'
     self.start_date_entry = form_fields.create_date_entry_row(self.__animated_build_method_frame, label_text)
+    self.start_date_entry.entry.delete(0, 'end')
+    self.start_date_entry.entry.insert(0, min_dataset_date)
+
+    max_dataset_date = max(self.dataset_date_values).date()
     label_text = 'Fecha de fin:'
     self.end_date_entry = form_fields.create_date_entry_row(self.__animated_build_method_frame, label_text)
+    self.end_date_entry.entry.delete(0, 'end')
+    self.end_date_entry.entry.insert(0, max_dataset_date)
 
     # Restore previous values from the project file if was configured.
     self.__restore_params_and_img_if_apply()
@@ -458,10 +475,8 @@ class VerticalSliceView(TabView):
       tk.messagebox.showerror(title='Error', message=message)
       return False
 
-    dataset_lon_values = dataset_utils.get_longitude_values()
-    min_dataset_lon, max_dataset_lon = min(dataset_lon_values), max(dataset_lon_values)
-    dataset_lat_values = dataset_utils.get_latitude_values()
-    min_dataset_lat, max_dataset_lat = min(dataset_lat_values), max(dataset_lat_values)
+    min_dataset_lon, max_dataset_lon = min(self.dataset_lon_values), max(self.dataset_lon_values)
+    min_dataset_lat, max_dataset_lat = min(self.dataset_lat_values), max(self.dataset_lat_values)
     if self.__axis_to_cut == 'latitude':
       # Validate latitud range and longitude value.
       try:
@@ -554,9 +569,8 @@ class VerticalSliceView(TabView):
         return False
 
       # Validate start and end dates range.
-      dataset_date_values = dataset_utils.get_time_values()
-      min_dataset_date = dataset_date_values[0].date()
-      max_dataset_date = dataset_date_values[-1].date()
+      min_dataset_date = min(self.dataset_date_values).date()
+      max_dataset_date = max(self.dataset_date_values).date()
       if end_date < min_dataset_date or start_date > max_dataset_date:
         message = 'Las fechas deben estar dentro del rango de fechas del dataset. '
         message += f'El rango de fechas del dataset va del {min_dataset_date} hasta el {max_dataset_date}.'
@@ -577,21 +591,32 @@ class VerticalSliceView(TabView):
       self.__static_build_method_frame.pack_forget()
 
   def __selected_axis_to_cut_handler(self, event):
+    # Reset entries.
+    self.min_axis_cut_entry.delete(0, 'end')
+    self.max_axis_cut_entry.delete(0, 'end')
+    self.other_axis_entry.delete(0, 'end')
+
     axis_to_cut_selected = event.widget.get()
     if axis_to_cut_selected == 'Latitud':
       self.__axis_to_cut = 'latitude'
       self.__min_axis_cut_label_var.set('Latitud mínima:')
       self.__max_axis_cut_label_var.set('Latitud máxima:')
       self.__other_axis_label_var.set('Longitud:')
+      
+      min_dataset_lat = min(self.dataset_lat_values)
+      max_dataset_lat = max(self.dataset_lat_values)
+      self.min_axis_cut_entry.insert(0, min_dataset_lat)
+      self.max_axis_cut_entry.insert(0, max_dataset_lat)
     elif axis_to_cut_selected == 'Longitud':
       self.__axis_to_cut = 'longitude'
       self.__min_axis_cut_label_var.set('Longitud mínima:')
       self.__max_axis_cut_label_var.set('Longitud máxima:')
       self.__other_axis_label_var.set('Latitud:')
-    # Reset entries.
-    self.min_axis_cut_entry.delete(0, 'end')
-    self.max_axis_cut_entry.delete(0, 'end')
-    self.other_axis_entry.delete(0, 'end')
+
+      min_dataset_lon = min(self.dataset_lon_values)
+      max_dataset_lon = max(self.dataset_lon_values)
+      self.min_axis_cut_entry.insert(0, min_dataset_lon)
+      self.max_axis_cut_entry.insert(0, max_dataset_lon)
 
   def __start_progress_bar(self):
     self.__progress_bar.start()
@@ -626,7 +651,9 @@ class VerticalSliceView(TabView):
     if len(parameters) > 0:
       self.build_method_cb.set(parameters['build_method'])
       self.axis_to_cut_cb.set(parameters['axis_to_cut'])
+      self.min_axis_cut_entry.delete(0, 'end')
       self.min_axis_cut_entry.insert(0, parameters['min_axis_cut'])
+      self.max_axis_cut_entry.delete(0, 'end')
       self.max_axis_cut_entry.insert(0, parameters['max_axis_cut'])
       self.other_axis_entry.insert(0, parameters['other_axis'])
       self.variable_cb.set(parameters['variable'])

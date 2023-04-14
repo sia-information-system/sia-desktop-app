@@ -9,7 +9,6 @@ import utils.basic_form_fields as form_fields
 import utils.project_manager as prj_mgmt
 from views.templates.tab_view import TabView
 from siaplotlib.chart_building import level_chart
-from PIL import ImageTk, Image
 from datetime import datetime
 
 class ContourMapView(TabView):
@@ -25,6 +24,9 @@ class ContourMapView(TabView):
     self.variables_long_names = dataset_utils.get_variables_long_names()
     self.variables_units = dataset_utils.get_variables_units()
     self.depth_list = dataset_utils.get_depth_values()
+    self.dataset_lon_values = dataset_utils.get_longitude_values()
+    self.dataset_lat_values = dataset_utils.get_latitude_values()
+    self.dataset_date_values = dataset_utils.get_time_values()
     self.duration_unit_dict = {
       'Frames por segundo': 'FRAMES_PER_SECOND',
       'Segundos por frame': 'SECONDS_PER_FRAME'
@@ -74,6 +76,25 @@ class ContourMapView(TabView):
     label_text = 'Cantidad de curvas:'
     self.n_curves_entry = form_fields.create_entry_row(form_entries_frame, label_text)
 
+    min_dataset_lon, max_dataset_lon = min(self.dataset_lon_values), max(self.dataset_lon_values)
+    min_dataset_lat, max_dataset_lat = min(self.dataset_lat_values), max(self.dataset_lat_values)
+
+    label_text = 'Longitud mínima:'
+    self.lon_min_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+    self.lon_min_entry.insert(0, min_dataset_lon)
+
+    label_text = 'Longitud máxima:'
+    self.lon_max_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+    self.lon_max_entry.insert(0, max_dataset_lon)
+
+    label_text = 'Latitud mínima:'
+    self.lat_min_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+    self.lat_min_entry.insert(0, min_dataset_lat)
+
+    label_text = 'Latitud máxima:'
+    self.lat_max_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+    self.lat_max_entry.insert(0, max_dataset_lat)
+
     # Following entries will be hidden or shown depending on the selected build method.
 
     self.__static_build_method_frame = ttk.Frame(form_entries_frame)
@@ -83,15 +104,25 @@ class ContourMapView(TabView):
 
     self.__animated_build_method_frame = ttk.Frame(form_entries_frame)
     self.__animated_build_method_frame.pack_forget()
+
     label_text = 'Unidad de duración:'
     duration_unit_list = list(self.duration_unit_dict.keys())
     self.duration_cb = form_fields.create_combobox_row(self.__animated_build_method_frame, label_text, duration_unit_list)
+
     label_text = 'Duración'
     self.duration_entry = form_fields.create_entry_row(self.__animated_build_method_frame, label_text)
+
+    min_dataset_date = min(self.dataset_date_values).date()
     label_text = 'Fecha de inicio:'
     self.start_date_entry = form_fields.create_date_entry_row(self.__animated_build_method_frame, label_text)
+    self.start_date_entry.entry.delete(0, 'end')
+    self.start_date_entry.entry.insert(0, min_dataset_date)
+
+    max_dataset_date = max(self.dataset_date_values).date()
     label_text = 'Fecha de fin:'
     self.end_date_entry = form_fields.create_date_entry_row(self.__animated_build_method_frame, label_text)
+    self.end_date_entry.entry.delete(0, 'end')
+    self.end_date_entry.entry.insert(0, max_dataset_date)
 
     # Restore previous values from the project file if was configured.
     self.__restore_params_and_img_if_apply()
@@ -107,6 +138,10 @@ class ContourMapView(TabView):
         self.chart_title_entry.get(),
         self.palette_colors_cb.get(), 
         self.n_curves_entry.get(),
+        self.lon_min_entry.get(),
+        self.lon_max_entry.get(),
+        self.lat_min_entry.get(),
+        self.lat_max_entry.get(),
         target_date=self.target_date_entry.entry.get(), # Only for static build method.
         duration_unit=self.duration_cb.get(), 
         duration=self.duration_entry.get(), # Only for animated build method.
@@ -134,6 +169,10 @@ class ContourMapView(TabView):
     chart_title,
     palette_colors,
     n_curves,
+    lon_min,
+    lon_max,
+    lat_min,
+    lat_max,
     target_date=None,
     duration_unit=None,
     duration=None,
@@ -147,6 +186,10 @@ class ContourMapView(TabView):
     print(f'chart_title: "{chart_title}"', file=sys.stderr)
     print(f'palette_colors: "{palette_colors}"', file=sys.stderr)
     print(f'n_curves: "{n_curves}"', file=sys.stderr)
+    print(f'lon_min: "{lon_min}"', file=sys.stderr)
+    print(f'lon_max: "{lon_max}"', file=sys.stderr)
+    print(f'lat_min: "{lat_min}"', file=sys.stderr)
+    print(f'lat_max: "{lat_max}"', file=sys.stderr)
     print(f'target_date: "{target_date}"', file=sys.stderr)
     print(f'duration_unit: "{duration_unit}"', file=sys.stderr)
     print(f'duration: "{duration}"', file=sys.stderr)
@@ -159,8 +202,22 @@ class ContourMapView(TabView):
     dims_and_var_configured = self.dataset_dims_and_vars_validation()
     if not dims_and_var_configured:
       return
-    valid_fields = self.__fields_validation(build_method, variable, depth, chart_title, 
-      palette_colors, n_curves, target_date, duration_unit, duration, start_date, end_date)
+    valid_fields = self.__fields_validation(build_method,
+      variable,
+      depth,
+      chart_title,
+      palette_colors,
+      n_curves,
+      lon_min,
+      lon_max,
+      lat_min,
+      lat_max,
+      target_date,
+      duration_unit,
+      duration,
+      start_date,
+      end_date
+    )
     if not valid_fields:
       return
     # Start progress bar.
@@ -169,10 +226,11 @@ class ContourMapView(TabView):
     try:
       if self.__build_method == 'static':
         self.__generate_static_chart(variable, depth, chart_title, palette_colors,
-          n_curves, target_date)
+          n_curves, lon_min, lon_max, lat_min, lat_max, target_date)
       elif self.__build_method == 'animated':
         self.__generate_animated_chart(variable, depth, chart_title, palette_colors,
-          n_curves, duration_unit, duration, start_date, end_date)
+          n_curves, lon_min, lon_max, lat_min, lat_max, 
+          duration_unit, duration, start_date, end_date)
     except Exception as err:
       self.__stop_progress_bar()
       tk.messagebox.showerror(title='Error', message=err)
@@ -184,13 +242,22 @@ class ContourMapView(TabView):
     chart_title,
     palette_colors,
     n_curves,
+    lon_min,
+    lon_max,
+    lat_min,
+    lat_max,
     target_date
   ):
     print(f'-> ContourMap static image for "{variable}" variable.', file=sys.stderr)
     dataset = global_vars.current_project_dataset
     var_name = self.variables_long_names[variable]
+    lon_min, lon_max = float(lon_min), float(lon_max)
+    lat_min, lat_max = float(lat_min), float(lat_max)
+
     dim_constraints = {
-      self.time_dim: [target_date]
+      self.time_dim: [target_date],
+      self.lon_dim: slice(lon_min, lon_max),
+      self.lat_dim: slice(lat_min, lat_max)
     }
     if depth != '':
       dim_constraints[self.depth_dim] = [depth]
@@ -247,6 +314,10 @@ class ContourMapView(TabView):
     chart_title,
     palette_colors,
     n_curves,
+    lon_min,
+    lon_max,
+    lat_min,
+    lat_max,
     duration_unit,
     duration,
     start_date,
@@ -255,8 +326,13 @@ class ContourMapView(TabView):
     print(f'-> ContourMap gif for "{variable}" variable.', file=sys.stderr)
     dataset = global_vars.current_project_dataset
     var_name = self.variables_long_names[variable]
+    lon_min, lon_max = float(lon_min), float(lon_max)
+    lat_min, lat_max = float(lat_min), float(lat_max)
+
     dim_constraints = {
-      self.time_dim: slice(start_date, end_date)
+      self.time_dim: slice(start_date, end_date),
+      self.lon_dim: slice(lon_min, lon_max),
+      self.lat_dim: slice(lat_min, lat_max)
     }
     if depth != '':
       dim_constraints[self.depth_dim] = [depth]
@@ -324,6 +400,10 @@ class ContourMapView(TabView):
     chart_title, 
     palette_colors,
     n_curves,
+    lon_min,
+    lon_max,
+    lat_min,
+    lat_max,
     target_date=None,
     duration_unit=None,
     duration=None,
@@ -340,6 +420,10 @@ class ContourMapView(TabView):
     if chart_title == '': empty_fields.append('Título del gráfico')
     if palette_colors == '': empty_fields.append('Paleta de colores')
     if n_curves == '': empty_fields.append('Cantidad de curvas')
+    if lon_min == '': empty_fields.append('Longitud mínima')
+    if lon_max == '': empty_fields.append('Longitud máxima')
+    if lat_min == '': empty_fields.append('Latitud mínima')
+    if lat_max == '': empty_fields.append('Latitud máxima')
     if self.__build_method == 'static':
       if target_date == '' or target_date == None:
         empty_fields.append('Fecha de objetivo')
@@ -368,6 +452,31 @@ class ContourMapView(TabView):
     except:
       message = 'La cantidad de curvas debe ser un número entero mayor a uno.'
       tk.messagebox.showerror(title='Error', message=message)
+      return False
+
+    # Validate minimun and maximum longitute and latitude range.
+    try:
+      try:
+        lon_min, lon_max = float(lon_min), float(lon_max)
+        lat_min, lat_max = float(lat_min), float(lat_max)
+      except:
+        raise Exception('La longitud y la latitud deben ser números flotantes.')
+
+      if lon_min >= lon_max or lat_min >= lat_max:
+        message = 'La longitud o latitud mínima debe ser menor a su valor máximo.'
+        raise Exception(message)
+
+      min_dataset_lon, max_dataset_lon = min(self.dataset_lon_values), max(self.dataset_lon_values)
+      min_dataset_lat, max_dataset_lat = min(self.dataset_lat_values), max(self.dataset_lat_values)
+
+      if lon_min < min_dataset_lon or lon_max > max_dataset_lon or \
+        lat_min < min_dataset_lat or lat_max > max_dataset_lat:
+        message = 'La longitud y latitud deben estar dentro del rango del dataset.\n'
+        message += f'Rango de longitud: {min_dataset_lon}° a {max_dataset_lon}°.\n'
+        message += f'Rango de latitud: {min_dataset_lat}° a {max_dataset_lat}°.'
+        raise Exception(message)
+    except Exception as err:
+      tk.messagebox.showerror(title='Error', message=err)
       return False
 
     if self.__build_method == 'static':
@@ -417,9 +526,8 @@ class ContourMapView(TabView):
         return False
 
       # Validate start and end dates range.
-      dataset_date_values = dataset_utils.get_time_values()
-      min_dataset_date = dataset_date_values[0].date()
-      max_dataset_date = dataset_date_values[-1].date()
+      min_dataset_date = min(self.dataset_date_values).date()
+      max_dataset_date = max(self.dataset_date_values).date()
       if end_date < min_dataset_date or start_date > max_dataset_date:
         message = 'Las fechas deben estar dentro del rango de fechas del dataset. '
         message += f'El rango de fechas del dataset va del {min_dataset_date} hasta el {max_dataset_date}.'
@@ -453,6 +561,10 @@ class ContourMapView(TabView):
       'chart_title': self.chart_title_entry.get(),
       'palette_colors': self.palette_colors_cb.get(),
       'n_curves': self.n_curves_entry.get(),
+      'lon_min': self.lon_min_entry.get(),
+      'lon_max': self.lon_max_entry.get(),
+      'lat_min': self.lat_min_entry.get(),
+      'lat_max': self.lat_max_entry.get(),
       'target_date': self.target_date_entry.entry.get(),
       'duration_unit': self.duration_cb.get(),
       'duration': self.duration_entry.get(),
@@ -474,6 +586,14 @@ class ContourMapView(TabView):
       self.chart_title_entry.insert(0, parameters['chart_title'])
       self.palette_colors_cb.set(parameters['palette_colors'])
       self.n_curves_entry.insert(0, parameters['n_curves'])
+      self.lon_min_entry.delete(0, 'end')
+      self.lon_min_entry.insert(0, parameters['lon_min'])
+      self.lon_max_entry.delete(0, 'end')
+      self.lon_max_entry.insert(0, parameters['lon_max'])
+      self.lat_min_entry.delete(0, 'end')
+      self.lat_min_entry.insert(0, parameters['lat_min'])
+      self.lat_max_entry.delete(0, 'end')
+      self.lat_max_entry.insert(0, parameters['lat_max'])
       self.target_date_entry.entry.delete(0, 'end')
       self.target_date_entry.entry.insert(0, parameters['target_date'])
       self.duration_cb.set(parameters['duration_unit'])

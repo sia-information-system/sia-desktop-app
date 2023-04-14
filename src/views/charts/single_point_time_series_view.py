@@ -20,6 +20,9 @@ class SinglePointTimeSeriesView(TabView):
     self.variables_long_names = dataset_utils.get_variables_long_names()
     self.variables_units = dataset_utils.get_variables_units()
     self.depth_list = dataset_utils.get_depth_values()
+    self.dataset_lon_values = dataset_utils.get_longitude_values()
+    self.dataset_lat_values = dataset_utils.get_latitude_values()
+    self.dataset_date_values = dataset_utils.get_time_values()
 
     self.__progress_bar = None
 
@@ -60,10 +63,17 @@ class SinglePointTimeSeriesView(TabView):
     label_text = 'Latitud: '
     self.latitude_entry = form_fields.create_entry_row(form_entries_frame, label_text)
 
+    min_dataset_date = min(self.dataset_date_values).date()
     label_text = 'Fecha de inicio:'
     self.start_date_entry = form_fields.create_date_entry_row(form_entries_frame, label_text)
+    self.start_date_entry.entry.delete(0, 'end')
+    self.start_date_entry.entry.insert(0, min_dataset_date)
+
+    max_dataset_date = max(self.dataset_date_values).date()
     label_text = 'Fecha de fin:'
     self.end_date_entry = form_fields.create_date_entry_row(form_entries_frame, label_text)
+    self.end_date_entry.entry.delete(0, 'end')
+    self.end_date_entry.entry.insert(0, max_dataset_date)
 
     # Restore previous values from the project file if was configured.
     self.__restore_params_and_img_if_apply()
@@ -253,10 +263,9 @@ class SinglePointTimeSeriesView(TabView):
       point_lon = float(longitude)
       point_lat = float(latitude)
 
-      dataset_lon_values = dataset_utils.get_longitude_values()
-      min_dataset_lon, max_dataset_lon = min(dataset_lon_values), max(dataset_lon_values)
-      dataset_lat_values = dataset_utils.get_latitude_values()
-      min_dataset_lat, max_dataset_lat = min(dataset_lat_values), max(dataset_lat_values)
+      min_dataset_lon, max_dataset_lon = min(self.dataset_lon_values), max(self.dataset_lon_values)
+      min_dataset_lat, max_dataset_lat = min(self.dataset_lat_values), max(self.dataset_lat_values)
+
       if point_lon < min_dataset_lon or point_lon > max_dataset_lon or \
         point_lat < min_dataset_lat or point_lat > max_dataset_lat:
         message = 'La longitud y la latitud deben estar dentro del rango del dataset.\n'
@@ -285,9 +294,8 @@ class SinglePointTimeSeriesView(TabView):
       return False
 
     # Validate start and end dates range.
-    dataset_date_values = dataset_utils.get_time_values()
-    min_dataset_date = dataset_date_values[0].date()
-    max_dataset_date = dataset_date_values[-1].date()
+    min_dataset_date = min(self.dataset_date_values).date()
+    max_dataset_date = max(self.dataset_date_values).date()
     if end_date < min_dataset_date or start_date > max_dataset_date:
       message = 'Las fechas deben estar dentro del rango de fechas del dataset. '
       message += f'El rango de fechas del dataset va del {min_dataset_date} hasta el {max_dataset_date}.'

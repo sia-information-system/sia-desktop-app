@@ -1,5 +1,6 @@
 import os
 import pathlib
+import math
 import sys
 import ttkbootstrap as ttk
 from configparser import ConfigParser
@@ -75,3 +76,11 @@ def clear_view(view):
 
   # Clear view, do not destroy the view (frame) itself just hide it.
   view.pack_forget()
+
+def round_ceil(number, decimals=0):
+  multiplier = 10 ** decimals
+  return math.ceil(number * multiplier) / multiplier
+
+def round_floor(number, decimals=0):
+  multiplier = 10 ** decimals
+  return math.floor(number * multiplier) / multiplier
