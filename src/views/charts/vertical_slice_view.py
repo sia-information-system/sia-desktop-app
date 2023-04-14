@@ -64,6 +64,9 @@ class VerticalSliceView(TabView):
     self.axis_to_cut_cb = form_fields.create_combobox_row(form_entries_frame, label_text, axis_to_cut_list, default_option='Latitud')
     self.axis_to_cut_cb.bind("<<ComboboxSelected>>", self.__selected_axis_to_cut_handler)
 
+    # Start by default with latitude as axis to cut.
+    self.__axis_to_cut = 'latitude'
+
     label_text = 'Valor mínimo del eje a cortar:'
     self.__min_axis_cut_label_var.set('Latitud mínima:')
     self.min_axis_cut_entry = form_fields.create_entry_row(form_entries_frame, label_text, label_string_var=self.__min_axis_cut_label_var)
@@ -281,7 +284,7 @@ class VerticalSliceView(TabView):
       failure_callback=self.__static_failure_build_callback
     )
 
-  def __static_success_build_callback(self, chart_builder):
+  def __static_success_build_callback(self, chart_builder, subset):
     print(f'-> Image built.', file=sys.stderr)
     img_buffer = chart_builder._chart.get_buffer()
     self.show_static_chart_img(img_buffer)
@@ -374,7 +377,7 @@ class VerticalSliceView(TabView):
       failure_callback=self.__animated_failure_build_callback
     )
 
-  def __animated_success_build_callback(self, chart_builder):
+  def __animated_success_build_callback(self, chart_builder, subset):
     print(f'-> Image built.', file=sys.stderr)
     gif_buffer = chart_builder._chart.get_buffer()
     self.show_animated_chart_img(gif_buffer, self.duration_unit, self.duration)

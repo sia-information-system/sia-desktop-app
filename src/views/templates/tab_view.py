@@ -140,8 +140,8 @@ class TabView(ttk.Frame):
 
   def show_static_chart_img(self, img_path_or_buffer):
     img = Image.open(img_path_or_buffer)
-    # img_resized = self.__resize_chart_img(img)
-    self.__chart_img = ImageTk.PhotoImage(img)
+    img_resized = self.__resize_chart_img(img)
+    self.__chart_img = ImageTk.PhotoImage(img_resized)
     self.__chart_img_label.configure(image=self.__chart_img)
 
   def show_animated_chart_img(self, img_path_or_buffer, duration_unit, duration):
@@ -163,11 +163,10 @@ class TabView(ttk.Frame):
       self.__col2_params.grid(row=0, column=1, sticky='nsew')
       self.__arrow_label.configure(text='⬅')
 
-  def __resize_chart_img(self, __chart_img):
-    max_height = 600 # TODO: Tamaño adecudo creo que 500
-    original_width, original_height = __chart_img.size
+  def __resize_chart_img(self, img, max_height=600):
+    original_width, original_height = img.size
     new_width = int(original_width * max_height / original_height)
-    return __chart_img.resize((new_width, max_height), Image.ANTIALIAS)
+    return img.resize((new_width, max_height), Image.ANTIALIAS)
 
   def __get_gif_frames(self, gif_buffer):
     frames = []
@@ -180,7 +179,7 @@ class TabView(ttk.Frame):
         pass  # End of frames
 
     # Convert PIL Image objects to PhotoImage objects
-    return [ImageTk.PhotoImage(frame) for frame in frames]
+    return [ImageTk.PhotoImage( self.__resize_chart_img(frame) ) for frame in frames]
 
   def __start_gif(self):
     self.play_chart_btn['state'] = 'disabled'

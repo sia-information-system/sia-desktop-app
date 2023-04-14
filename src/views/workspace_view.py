@@ -225,7 +225,7 @@ class WorkspaceView(ttk.Frame):
     elif chart_type == 'CURRENTS_CHART':
       chart_frame = CurrentsChartView(self.notebook)
     elif chart_type == 'WIND_ROSE':
-      chart_frame = WindRoseView(self.notebook)
+      chart_frame = WindRoseView(self.notebook, project_path, tab_name)
     elif chart_type == 'VERTICAL_PROFILE':
       chart_frame = SinglePointVerticalProfileView(self.notebook, project_path, tab_name)
     elif chart_type == 'VERTICAL_SLICE':

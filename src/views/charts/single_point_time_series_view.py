@@ -9,7 +9,6 @@ import utils.basic_form_fields as form_fields
 import utils.project_manager as prj_mgmt
 from views.templates.tab_view import TabView
 from siaplotlib.chart_building import line_chart
-from PIL import ImageTk, Image
 from datetime import datetime
 
 class SinglePointTimeSeriesView(TabView):
@@ -178,7 +177,7 @@ class SinglePointTimeSeriesView(TabView):
       failure_callback=self.__static_failure_build_callback
     )
 
-  def __static_success_build_callback(self, chart_builder):
+  def __static_success_build_callback(self, chart_builder, subset):
     print(f'-> Image built.', file=sys.stderr)
     img_buffer = chart_builder._chart.get_buffer()
     self.show_static_chart_img(img_buffer)
