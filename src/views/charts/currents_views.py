@@ -1,17 +1,22 @@
 import pathlib
+import re
+import sys
 import tkinter as tk
 import ttkbootstrap as ttk
 import utils.dataset_utils as dataset_utils
 import utils.global_variables as global_vars
 import utils.basic_form_fields as form_fields
+import utils.project_manager as prj_mgmt
 from datetime import datetime
 from views.templates.tab_view import TabView
-from siaplotlib.chart_building import level_chart
-from PIL import ImageTk, Image
+from siaplotlib.chart_building import line_chart
 
 class CurrentsChartView(TabView):
-  def __init__(self, master):
+  def __init__(self, master, project_path, worksheet_name):
     super().__init__(master, chart_type='CURRENTS_CHART')
+    self.project_path = project_path
+    self.worksheet_name = worksheet_name
+
     self.depth_list = dataset_utils.get_depth_values()
     self.dataset_lon_values = dataset_utils.get_longitude_values()
     self.dataset_lat_values = dataset_utils.get_latitude_values()
@@ -36,40 +41,52 @@ class CurrentsChartView(TabView):
 
     label_text = 'Profundidad [m]:'
     default_depth = self.depth_list[0]
-    depth_cb = form_fields.create_combobox_row(form_entries_frame, label_text, self.depth_list, default_option=default_depth)
+    self.depth_cb = form_fields.create_combobox_row(form_entries_frame, label_text, self.depth_list, default_option=default_depth)
 
     label_text = 'Título del gráfico:'
-    chart_title_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+    self.chart_title_entry = form_fields.create_entry_row(form_entries_frame, label_text)
 
     label_text = 'Fecha objetivo:'
-    target_date_entry = form_fields.create_date_entry_row(form_entries_frame, label_text)
+    self.target_date_entry = form_fields.create_date_entry_row(form_entries_frame, label_text)
 
-    label_text = 'Densidad de la flecha:'
-    stride_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+    label_text = 'Nivel de agrupación:'
+    self.stride_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+
+    min_dataset_lon, max_dataset_lon = min(self.dataset_lon_values), max(self.dataset_lon_values)
+    min_dataset_lat, max_dataset_lat = min(self.dataset_lat_values), max(self.dataset_lat_values)
 
     label_text = 'Longitud mínima:'
-    lon_min_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+    self.lon_min_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+    self.lon_min_entry.insert(0, min_dataset_lon)
 
     label_text = 'Longitud máxima:'
-    lon_max_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+    self.lon_max_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+    self.lon_max_entry.insert(0, max_dataset_lon)
 
     label_text = 'Latitud mínima:'
-    lat_min_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+    self.lat_min_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+    self.lat_min_entry.insert(0, min_dataset_lat)
 
     label_text = 'Latitud máxima:'
-    lat_max_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+    self.lat_max_entry = form_fields.create_entry_row(form_entries_frame, label_text)
+    self.lat_max_entry.insert(0, max_dataset_lat)
+
+    # Restore previous values from the project file if was configured.
+    self.__restore_params_and_img_if_apply()
 
     # Apply button.
     connect_button = ttk.Button(
       form_frame, 
       text='Generar gráfico', 
       command=lambda: self.__start_creation_chart(
-        depth_cb.get(),
-        chart_title_entry.get(),
-        target_date_entry.entry.get(),
-        stride_entry.get(),
-        lon_min_entry.get(), lon_max_entry.get(),
-        lat_min_entry.get(), lat_max_entry.get(),
+        self.depth_cb.get(),
+        self.chart_title_entry.get(),
+        self.target_date_entry.entry.get(),
+        self.stride_entry.get(),
+        self.lon_min_entry.get(), 
+        self.lon_max_entry.get(),
+        self.lat_min_entry.get(), 
+        self.lat_max_entry.get(),
       )
     )
     connect_button.pack(pady=10)
@@ -79,10 +96,10 @@ class CurrentsChartView(TabView):
       maximum=40, 
       mode='determinate',
       length=100,
-      value=20,
+      value=0,
       bootstyle='success striped'
     )
-    self.__show_and_run_progress_bar()
+    self.__progress_bar.pack(pady=10)
 
   def __start_creation_chart(
     self,
@@ -103,30 +120,22 @@ class CurrentsChartView(TabView):
     print(f'lat_min: "{lat_min}"')
     print(f'lat_max: "{lat_max}"')
 
-    self.__show_and_run_progress_bar()
+    # Hide column 2 with the chart and buttons.
     self.chart_and_btns_frame.pack_forget()
-
-    dims_and_var_configured = self.dataset_dims_and_vars_validation()
-    if not dims_and_var_configured:
-      return
-
+    # Validations.
     valid_fields = self.__fields_validation(depth, chart_title, target_date, stride,
       lon_min, lon_max, lat_min, lat_max)
     if not valid_fields:
       return
+    # Start progress bar.
+    self.__start_progress_bar()
 
     try:
-      dataset = global_vars.current_project_dataset 
-      self.chart_builder = level_chart.ArrowChartBuilder(dataset=dataset)
-
       self.__generate_static_chart(depth, chart_title, target_date, stride, 
         lon_min, lon_max, lat_min, lat_max)
-
-      self.__stop_and_hide_progress_bar()
-      self.chart_and_btns_frame.pack(fill='both', expand=1)
-    except Exception as e:
-      print(f'Error: {e}')
-      pass
+    except Exception as err:
+      self.__stop_progress_bar()
+      tk.messagebox.showerror(title='Error', message=err)
 
   def __generate_static_chart(
     self,
@@ -137,8 +146,10 @@ class CurrentsChartView(TabView):
     lon_min, lon_max,
     lat_min, lat_max
   ):
-    lon_min, lon_max = int(lon_min), int(lon_max)
-    lat_min, lat_max = int(lat_min), int(lat_max)
+    print(f'-> Static Arror chart image.')
+    dataset = global_vars.current_project_dataset 
+    lon_min, lon_max = float(lon_min), float(lon_max)
+    lat_min, lat_max = float(lat_min), float(lat_max)
 
     dim_constraints = {
       self.time_dim: [target_date],
@@ -147,24 +158,49 @@ class CurrentsChartView(TabView):
       self.lat_dim: slice(lat_min, lat_max),
     }
 
-    print(f'-> Static Arror chart image.')
-    self.chart_builder.build_static(
-      var_ew = self.eastward_var,
-      var_nw = self.northward_var,
-      var_lon = self.lon_dim,
-      var_lat = self.lat_dim,
+    self.chart_builder = line_chart.StaticArrowChartBuilder(
+      dataset=dataset,
+      eastward_var_name = self.eastward_var,
+      northward_var_name = self.northward_var,
+      lat_dim_name = self.lat_dim,
+      lon_dim_name = self.lon_dim,
+      depth_dim_name = self.depth_dim,
+      time_dim_name = self.time_dim,
+      grouping_level = int(stride),
       title = chart_title,
+      var_label='Velocidad [m/s]',
       dim_constraints= dim_constraints,
-      stride = int(stride)
+    )
+    self.chart_builder.build(
+      success_callback=self.__static_success_build_callback, 
+      failure_callback=self.__static_failure_build_callback
     )
 
-    img_buffer = self.chart_builder._chart.get_buffer()
-    img = Image.open(img_buffer)
-    img_resized = self.resize_chart_img(img)
-    self.chart_img = ImageTk.PhotoImage(img_resized)
-    self.chart_img_label.configure(image=self.chart_img)
-    # Hide button to play gif.
-    self.play_chart_btn.pack_forget()
+  def __static_success_build_callback(self, chart_builder, subset):
+    print(f'-> Image built.', file=sys.stderr)
+    img_buffer = chart_builder._chart.get_buffer()
+    self.show_static_chart_img(img_buffer)
+
+    chart_img_rel_path = self.save_current_img_chart(self.worksheet_name, '.png')
+    print(f'-> Static chart image saved in "{chart_img_rel_path}"', file=sys.stderr)
+    chart_subset_info = dataset_utils.dataarray_info(subset)
+    self.show_chart_info(chart_info=chart_subset_info)
+    print(f'-> Chart info extracted and displayed.', file=sys.stderr)
+    self.__save_chart_parameters_and_img(chart_img_rel_path, chart_subset_info)
+    print(f'-> Current state saved. Parameters, chart image and chart info.', file=sys.stderr)
+
+    self.__stop_progress_bar()
+    self.chart_and_btns_frame.pack(fill='both', expand=1)
+
+  def __static_failure_build_callback(self, err):
+    print('--- An error ocurr while building the chart. ---', file=sys.stderr)
+    print(err, file=sys.stderr)
+
+    err_msg = 'Ocurrió un error al generar el gráfico.\n'
+    err_msg += 'Revisa nuevamente los parámetros de creación del gráfico.'
+
+    self.__stop_progress_bar()
+    tk.messagebox.showerror(title='Error', message=err_msg)
 
   def __fields_validation(
     self, 
@@ -179,10 +215,14 @@ class CurrentsChartView(TabView):
     
     # Empty fields validation.
     empty_fields = []
-    if chart_title == '': empty_fields.append('Título del gráfico')
     if depth == '': empty_fields.append('Profundidad')
+    if chart_title == '': empty_fields.append('Título del gráfico')
     if target_date == '': empty_fields.append('Fecha objetivo')
-    if stride == '': empty_fields.append('Densidad de la flecha')
+    if stride == '': empty_fields.append('Nivel de agrupación')
+    if lon_min == '': empty_fields.append('Longitud mínima')
+    if lon_max == '': empty_fields.append('Longitud máxima')
+    if lat_min == '': empty_fields.append('Latitud mínima')
+    if lat_max == '': empty_fields.append('Latitud máxima')
 
     if len(empty_fields) > 0:
       message = 'Todos los campos son obligatorios. Datos faltantes: \n'
@@ -196,7 +236,7 @@ class CurrentsChartView(TabView):
       if stride <= 0:
         raise Exception()
     except:
-      message = 'Densidad de la flecha debe ser un número entero positivo.'
+      message = 'Nivel de agrupación debe ser un número entero positivo.'
       tk.messagebox.showerror(title='Error', message=message)
       return False
 
@@ -210,38 +250,79 @@ class CurrentsChartView(TabView):
 
     # Validate minimun and maximum longitute and latitude range.
     try:
-      lon_min, lon_max = int(lon_min), int(lon_max)
-      lat_min, lat_max = int(lat_min), int(lat_max)
+      try:
+        lon_min, lon_max = float(lon_min), float(lon_max)
+        lat_min, lat_max = float(lat_min), float(lat_max)
+      except:
+        raise Exception('La longitud y la latitud deben ser números flotantes.')
 
       if lon_min >= lon_max or lat_min >= lat_max:
-        message = 'La longitud o latitud minima debe ser menor a su valor máximo.'
-        tk.messagebox.showerror(title='Error', message=message)
-        return False
+        message = 'La longitud o latitud mínima debe ser menor a su valor máximo.'
+        raise Exception(message)
 
       min_dataset_lon, max_dataset_lon = min(self.dataset_lon_values), max(self.dataset_lon_values)
       min_dataset_lat, max_dataset_lat = min(self.dataset_lat_values), max(self.dataset_lat_values)
 
-      if lon_max < min_dataset_lon or lon_min > max_dataset_lon or \
-        lat_max < min_dataset_lat or lat_min > max_dataset_lat:
+      if lon_min < min_dataset_lon or lon_max > max_dataset_lon or \
+        lat_min < min_dataset_lat or lat_max > max_dataset_lat:
         message = 'La longitud y latitud deben estar dentro del rango del dataset.\n'
         message += f'Rango de longitud: {min_dataset_lon}° a {max_dataset_lon}°.\n'
         message += f'Rango de latitud: {min_dataset_lat}° a {max_dataset_lat}°.'
-        tk.messagebox.showerror(title='Error', message=message)
-        return False
-    except:
-      message = 'La longitud y la latitud deben ser números flotantes.'
-      tk.messagebox.showerror(title='Error', message=message)
+        raise Exception(message)
+    except Exception as err:
+      tk.messagebox.showerror(title='Error', message=err)
       return False
 
     return True
 
-  def __show_and_run_progress_bar(self):
-    # print('se llamo a show progress bar')
-    self.__progress_bar.pack(pady=10)
+  def __start_progress_bar(self):
     self.__progress_bar.start()
 
-  def __stop_and_hide_progress_bar(self):
-    pass
-    # print('se llamo a stop and hide progress bar')
-    # self.__progress_bar.stop()
-    # self.__progress_bar.pack_forget()
+  def __stop_progress_bar(self):
+    self.__progress_bar.stop()
+
+  def __save_chart_parameters_and_img(self, chart_img_rel_path, chart_subset_info):
+    parameters = {
+      'depth': self.depth_cb.get(),
+      'chart_title': self.chart_title_entry.get(),
+      'target_date': self.target_date_entry.entry.get(),
+      'stride': self.stride_entry.get(),
+      'lon_min': self.lon_min_entry.get(),
+      'lon_max': self.lon_max_entry.get(),
+      'lat_min': self.lat_min_entry.get(),
+      'lat_max': self.lat_max_entry.get()
+    }
+
+    prj_mgmt.save_chart_parameters_and_img(
+      self.project_path, 
+      self.worksheet_name, 
+      parameters, 
+      chart_img_rel_path,
+      chart_subset_info
+    )
+
+  def __restore_params_and_img_if_apply(self):
+    chart_data = prj_mgmt.get_chart_parameters_and_img(self.project_path, self.worksheet_name)
+    parameters = chart_data['parameters']
+    chart_img_rel_path = chart_data['chart_img_rel_path']
+    chart_subset_info = chart_data['chart_subset_info']
+
+    if len(parameters) > 0:
+      self.depth_cb.set(parameters['depth'])
+      self.chart_title_entry.insert(0, parameters['chart_title'])
+      self.target_date_entry.entry.delete(0, 'end')
+      self.target_date_entry.entry.insert(0, parameters['target_date'])
+      self.stride_entry.insert(0, parameters['stride'])
+      self.lon_min_entry.delete(0, 'end')
+      self.lon_min_entry.insert(0, parameters['lon_min'])
+      self.lon_max_entry.delete(0, 'end')
+      self.lon_max_entry.insert(0, parameters['lon_max'])
+      self.lat_min_entry.delete(0, 'end')
+      self.lat_min_entry.insert(0, parameters['lat_min'])
+      self.lat_max_entry.delete(0, 'end')
+      self.lat_max_entry.insert(0, parameters['lat_max'])
+
+      img_path = pathlib.Path(global_vars.current_project_path, chart_img_rel_path)
+      self.show_static_chart_img(img_path)
+
+      self.show_chart_info(chart_subset_info)

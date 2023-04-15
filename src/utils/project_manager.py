@@ -6,6 +6,7 @@ import utils.general_utils as gen_utils
 import utils.global_variables as global_vars
 from utils.global_constants import HOME_PROJECTS_DIR, PROJECT_EXTENSION
 from tkinter.filedialog import askopenfilename
+from siaextractlib.processing import wrangling
 
 def get_project_metadata_file_path(project_path):
   for filename in os.listdir(project_path):
@@ -121,7 +122,7 @@ def get_dataset_project(project_path):
     metadata = json.load(json_file)
     project_dataset_path = metadata['dataset']['fromProjectPath']
     dataset_path = pathlib.Path(project_path, project_dataset_path)
-    ds = xr.open_dataset(dataset_path, engine='netcdf4')
+    ds = wrangling.open_dataset(dataset_path)
     ds.close()
   return ds
 

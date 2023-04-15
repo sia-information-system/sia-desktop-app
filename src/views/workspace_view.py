@@ -227,7 +227,7 @@ class WorkspaceView(ttk.Frame):
     elif chart_type == 'TIME_SERIES':
       chart_frame = SinglePointTimeSeriesView(self.notebook, project_path, tab_name)
     elif chart_type == 'CURRENTS_CHART':
-      chart_frame = CurrentsChartView(self.notebook)
+      chart_frame = CurrentsChartView(self.notebook, project_path, tab_name)
     elif chart_type == 'WIND_ROSE':
       chart_frame = WindRoseView(self.notebook, project_path, tab_name)
     elif chart_type == 'VERTICAL_PROFILE':
