@@ -34,7 +34,7 @@ class DatasetInfoView(ScrollableView):
     title_label = ttk.Label(info_frame, text='Metadatos', font=('Helvetica', 14))
     title_label.pack(pady=10)
 
-    info_text = ttk.Text(info_frame, wrap='word', font=('Helvetica', 12))
+    info_text = ttk.Text(info_frame, wrap='word', font=('Helvetica', 12), width=90)
     info_text.pack(fill='both', expand=1, pady=20)
 
     info_text.insert('end', dataset_utils.get_dataset_info())

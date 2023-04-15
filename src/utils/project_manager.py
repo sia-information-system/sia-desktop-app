@@ -217,7 +217,7 @@ def delete_worksheet(project_path, sheet_name):
     for chart_file in img_absolute_path.parent.glob(filename_to_del + '.*'):
       chart_file.unlink()
 
-def save_chart_parameters_and_img(project_path, sheet_name, parameters, chart_img_rel_path):
+def save_chart_parameters_and_img(project_path, sheet_name, parameters, chart_img_rel_path, chart_subset_info):
   # Find the project metadata (json file).
   project_metadata_path = get_project_metadata_file_path(project_path)
   with open(project_metadata_path) as json_file:
@@ -228,6 +228,7 @@ def save_chart_parameters_and_img(project_path, sheet_name, parameters, chart_im
     if sheet['name'] == sheet_name.strip().lower():
       sheet['parameters'] = parameters
       sheet['chart_img_rel_path'] = chart_img_rel_path
+      sheet['chart_subset_info'] = chart_subset_info
       break
 
   # Save updated metadata json in project directory.
@@ -244,8 +245,9 @@ def get_chart_parameters_and_img(project_path, sheet_name):
   for sheet in metadata['worksheets']:
     if sheet['name'] == sheet_name.strip().lower():
       return {
-        'parameters': sheet['parameters'],
-        'chart_img_rel_path': sheet['chart_img_rel_path']
+        'parameters': sheet['parameters'] if 'parameters' in sheet else {},
+        'chart_img_rel_path': sheet['chart_img_rel_path'] if 'chart_img_rel_path' in sheet else '',
+        'chart_subset_info': sheet['chart_subset_info'] if 'chart_subset_info' in sheet else ''
       }
 
   return {}

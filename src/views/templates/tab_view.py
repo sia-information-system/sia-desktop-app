@@ -22,7 +22,7 @@ class TabView(ttk.Frame):
     self.__arrow_label = None
     self.__col2_params = None
     self.col2_user_params_frame = None
-    self.col2_real_values_frame = None
+    self.__chart_info_text = None
     self.__col3_chart = None
     self.chart_and_btns_frame = None
     self.__chart_img = None
@@ -44,7 +44,7 @@ class TabView(ttk.Frame):
     self.rowconfigure(0, weight=1)
 
     # Column 1
-    self.__col1_arrow_btn = ttk.Frame(self, bootstyle='default') # TODO: Delete bootstyle after testing. danger
+    self.__col1_arrow_btn = ttk.Frame(self, bootstyle='default')
     self.__col1_arrow_btn.grid(row=0, column=0, sticky='nsew')
 
     self.__arrow_label = ttk.Label(self.__col1_arrow_btn, text='⬅', font=('TkDefaultFont', 16))
@@ -52,7 +52,7 @@ class TabView(ttk.Frame):
     self.__arrow_label.bind('<Button-1>', self.__toggle_column)
 
     # Column 2
-    self.__col2_params = ScrolledFrame(self, bootstyle='default', width=500) # TODO: Delete bootstyle after testing. info
+    self.__col2_params = ScrolledFrame(self, bootstyle='default', width=500)
     self.__col2_params.grid(row=0, column=1, sticky='nsew')
 
     params_notebook = ttk.Notebook(self.__col2_params, bootstyle='dark')
@@ -61,13 +61,16 @@ class TabView(ttk.Frame):
     self.col2_user_params_frame = ttk.Frame(params_notebook)
     params_notebook.add(self.col2_user_params_frame, text='Parametros')
 
-    self.col2_real_values_frame = ttk.Frame(params_notebook)
-    params_notebook.add(self.col2_real_values_frame, text='Información de la visualización')
-    title_label = ttk.Label(self.col2_real_values_frame, text='Valores reales de la visualización')
+    col2_real_values_frame = ttk.Frame(params_notebook)
+    params_notebook.add(col2_real_values_frame, text='Información de la visualización')
+    title_label = ttk.Label(col2_real_values_frame, text='Subconjunto de datos usados para la visualización')
     title_label.pack(pady=20)
 
+    self.__chart_info_text = ttk.Text(col2_real_values_frame, wrap='word')
+    self.__chart_info_text.pack(fill='both', expand=1)
+
     # Column 3
-    self.__col3_chart = ScrolledFrame(self, bootstyle='default') # TODO: Delete bootstyle after testing. success
+    self.__col3_chart = ScrolledFrame(self, bootstyle='default')
     self.__col3_chart.grid(row=0, column=2, sticky='nsew')
 
     col3_chart_title = ttk.Label(self.__col3_chart, text='Gráfica', font=('TkDefaultFont', 14))
@@ -154,6 +157,14 @@ class TabView(ttk.Frame):
     # Show first frame
     self.__chart_img = self.__gif_images[0]
     self.__chart_img_label.configure(image=self.__chart_img)
+
+  def show_chart_info(self, chart_info):
+    self.__chart_info_text.configure(state='normal')
+    self.__chart_info_text.delete(1.0, 'end')
+    self.__chart_info_text.insert('end', chart_info)
+    self.__chart_info_text.configure(state='disabled')
+    # Widget is resized to have a height equal to the number of text rows in the widget.
+    self.__chart_info_text.configure(height=self.__chart_info_text.index('end').split('.')[0])
 
   def __toggle_column(self, event):
     if self.__col2_params.winfo_ismapped():

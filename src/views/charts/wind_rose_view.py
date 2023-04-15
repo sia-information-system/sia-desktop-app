@@ -231,8 +231,11 @@ class WindRoseView(TabView):
 
     chart_img_rel_path = self.save_current_img_chart(self.worksheet_name, '.png')
     print(f'-> Static chart image saved in "{chart_img_rel_path}"', file=sys.stderr)
-    self.__save_chart_parameters_and_img(chart_img_rel_path)
-    print(f'-> Current state saved. Parameters and chart image', file=sys.stderr)
+    chart_subset_info = dataset_utils.dataarray_info(subset)
+    self.show_chart_info(chart_info=chart_subset_info)
+    print(f'-> Chart info extracted and displayed.', file=sys.stderr)
+    self.__save_chart_parameters_and_img(chart_img_rel_path, chart_subset_info)
+    print(f'-> Current state saved. Parameters, chart image and chart info.', file=sys.stderr)
 
     self.__stop_progress_bar()
     self.chart_and_btns_frame.pack(fill='both', expand=1)
@@ -360,7 +363,7 @@ class WindRoseView(TabView):
   def __stop_progress_bar(self):
     self.__progress_bar.stop()
 
-  def __save_chart_parameters_and_img(self, chart_img_rel_path):
+  def __save_chart_parameters_and_img(self, chart_img_rel_path, chart_subset_info):
     parameters = {
       'depth': self.depth_cb.get(),
       'chart_title': self.chart_title_entry.get(),
@@ -376,12 +379,19 @@ class WindRoseView(TabView):
       'speed_legend_step': self.speed_legend_step_entry.get()
     }
 
-    prj_mgmt.save_chart_parameters_and_img(self.project_path, self.worksheet_name, parameters, chart_img_rel_path)
+    prj_mgmt.save_chart_parameters_and_img(
+      self.project_path, 
+      self.worksheet_name, 
+      parameters, 
+      chart_img_rel_path,
+      chart_subset_info
+    )
 
   def __restore_params_and_img_if_apply(self):
     chart_data = prj_mgmt.get_chart_parameters_and_img(self.project_path, self.worksheet_name)
     parameters = chart_data['parameters']
     chart_img_rel_path = chart_data['chart_img_rel_path']
+    chart_subset_info = chart_data['chart_subset_info']
 
     if len(parameters) > 0:
       self.depth_cb.set(parameters['depth'])
@@ -407,3 +417,5 @@ class WindRoseView(TabView):
 
       img_path = pathlib.Path(global_vars.current_project_path, chart_img_rel_path)
       self.show_static_chart_img(img_path)
+
+      self.show_chart_info(chart_subset_info)

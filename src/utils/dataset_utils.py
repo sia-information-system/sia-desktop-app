@@ -1,5 +1,7 @@
 import xarray as xr
 import numpy as np
+import tempfile
+import sys
 from datetime import datetime
 import utils.global_variables as global_vars
 
@@ -89,6 +91,13 @@ def get_dataset_info():
   if dataset is None:
     return 'No hay un conjunto de datos cargado'
 
+  # with tempfile.TemporaryFile(mode='w+t') as temp_file:
+  #   sys.stdout = temp_file
+  #   dataset.info()
+  #   sys.stdout = sys.__stdout__
+  #   temp_file.seek(0)
+  #   dataset_info_text = temp_file.read()
+
   dataset_info_text = 'DATOS GENERALES\n\n'
   ds_dict = dataset.attrs
   for key in ds_dict:
@@ -120,3 +129,13 @@ def get_dataset_info():
         dataset_info_text += f'\t\t{key}: {variable.attrs[key]}\n'
 
   return dataset_info_text
+
+def dataarray_info(da):
+  dataarray_info_text = 'Dimensions:\n'
+  dataarray_info_text += f'{da.dims}\n\n'
+  dataarray_info_text += f'{da.coords}\n\n' # Includes "Coordinates:"
+  dataarray_info_text += 'Variable attributes:\n'
+  for attr in da.attrs:
+    dataarray_info_text += f'  {attr}: {da.attrs[attr]}\n'
+
+  return dataarray_info_text
