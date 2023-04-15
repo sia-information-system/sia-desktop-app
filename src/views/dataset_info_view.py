@@ -2,6 +2,7 @@ import tkinter as tk
 import ttkbootstrap as ttk
 from views.templates.scrollable_view import ScrollableView
 import utils.dataset_utils as dataset_utils
+import utils.general_utils as gen_utils
 import utils.basic_form_fields as form_fields
 import utils.global_variables as global_vars
 import utils.project_manager as prj_mgmt
@@ -114,9 +115,8 @@ class DatasetInfoView(ScrollableView):
     )
     save_data_button.pack(pady=10)
 
-    if dataset_utils.is_dataset_loaded():
-      # Check one dimension is enough to know if the dataset is already configured.
-      if global_vars.time_dim != None:
+    if gen_utils.is_project_loaded():
+      if gen_utils.is_project_configured():
         time_dim_cb.set(global_vars.time_dim)
         depth_dim_cb.set(global_vars.depth_dim)
         lon_dim_cb.set(global_vars.lon_dim)

@@ -171,8 +171,12 @@ class WorkspaceView(ttk.Frame):
     project_title_label = ttk.Label(self, text=title, font=('TkDefaultFont', 14))
     project_title_label.pack(pady=10)
 
-    if not self.project_dataset:
-      self.__create_empty_project_frame()
+    if not gen_utils.is_project_loaded():
+      self.__create_project_not_loaded_frame()
+      return
+
+    if not gen_utils.is_project_configured():
+      self.__create_dataset_config_not_done_frame()
       return
 
     # Notebook.
@@ -264,7 +268,7 @@ class WorkspaceView(ttk.Frame):
       chart_type = worksheet['chart_type']
       self.__add_tab(project_path, tab_name, chart_type)
 
-  def __create_empty_project_frame(self):
+  def __create_project_not_loaded_frame(self):
     frame = ttk.Frame(self)
     frame.pack(fill='both', expand=1)
 
@@ -297,6 +301,37 @@ class WorkspaceView(ttk.Frame):
 
     return frame
 
+  def __create_dataset_config_not_done_frame(self):
+    frame = ttk.Frame(self)
+    frame.pack(fill='both', expand=1)
+
+    label = ttk.Label(frame, text='Configuracion del dataset no realizada.', font=('TkDefaultFont', 12))
+    label.pack(pady=10)
+
+    label_text = 'Antes de continuar debe configurar los nombres de las dimensiones y variables '
+    label_text += 'que usa el dataset. \n\nPara ello, por favor vaya a la pestaña "Información de datos"'
+    label_text += ' y llene el formulario.\n'
+    label = ttk.Label(frame, text=label_text, font=('TkDefaultFont', 12))
+    label.pack(pady=30)
+
+    buttons_frame = ttk.Frame(frame)
+    buttons_frame.pack(pady=10)
+
+    redirect_to_data_info_button = ttk.Button(
+      buttons_frame,
+      text='Ir a "Información de datos"',
+      command=self.__redirect_to_dataset_information,
+      bootstyle='default',
+      width=30
+    )
+    redirect_to_data_info_button.pack(pady=10, padx=(0, 10), side='left')
+
+    return frame
+
   def __redirect_to_create_project(self):
     new_project_view = gen_utils.find_view(self.root_window, 'NewProjectView')
+    gen_utils.change_view(self.root_window, new_project_view)
+
+  def __redirect_to_dataset_information(self):
+    new_project_view = gen_utils.find_view(self.root_window, 'DatasetInfoView')
     gen_utils.change_view(self.root_window, new_project_view)

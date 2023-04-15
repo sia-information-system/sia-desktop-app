@@ -196,9 +196,6 @@ class VerticalSliceView(TabView):
     # Hide column 2 with the chart and buttons.
     self.chart_and_btns_frame.pack_forget()
     # Validations.
-    dims_and_var_configured = self.dataset_dims_and_vars_validation()
-    if not dims_and_var_configured:
-      return
     valid_fields = self.__fields_validation(
       build_method, 
       axis_to_cut,

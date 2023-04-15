@@ -138,6 +138,13 @@ class NewProjectView(ttk.Frame):
       global_vars.current_project_dataset = prj_mgmt.get_dataset_project(global_vars.current_project_path)
     else:
       global_vars.current_project_dataset = None
+    # Reset default values of dataset dimensiones and variables.
+    global_vars.time_dim = None
+    global_vars.depth_dim = None
+    global_vars.lon_dim = None
+    global_vars.lat_dim = None
+    global_vars.northward_var = None
+    global_vars.eastward_var = None
 
     # Redirect to the next view.
     if get_data_option == 'select_dataset':

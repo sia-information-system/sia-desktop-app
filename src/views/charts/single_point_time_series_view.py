@@ -126,9 +126,6 @@ class SinglePointTimeSeriesView(TabView):
     # Hide column 2 with the chart and buttons.
     self.chart_and_btns_frame.pack_forget()
     # Validations.
-    dims_and_var_configured = self.dataset_dims_and_vars_validation()
-    if not dims_and_var_configured:
-      return
     valid_fields = self.__fields_validation(variable, depths, chart_title, longitude, latitude, 
       start_date, end_date)
     if not valid_fields:

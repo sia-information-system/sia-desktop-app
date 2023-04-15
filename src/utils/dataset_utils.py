@@ -3,9 +3,6 @@ import numpy as np
 from datetime import datetime
 import utils.global_variables as global_vars
 
-def is_dataset_loaded():
-  return global_vars.current_project_dataset is not None
-
 def get_dimensions():
   dataset = global_vars.current_project_dataset
   if not dataset:
@@ -22,29 +19,30 @@ def get_variables():
         variables_only.remove(coord)
   return variables_only
 
-# FIXME: Antes de crear una nueva hoja, se debe validar que las variables y dimensiones
-# esten configuradas. Quitar esta validacion de cada clase de grafica.
-
-def get_depth_values(name_in_dataset='depth'):
+def get_depth_values():
+  depth_dim = global_vars.depth_dim
   dataset = global_vars.current_project_dataset
-  depth_values = dataset.coords[name_in_dataset].values
+  depth_values = dataset.coords[depth_dim].values
   depth_values = [round(depth, 3) for depth in depth_values]
   return depth_values
 
-def get_time_values(name_in_dataset='time'):
+def get_time_values():
+  time_dim = global_vars.time_dim
   dataset = global_vars.current_project_dataset
-  time_values = dataset.coords[name_in_dataset].values
+  time_values = dataset.coords[time_dim].values
   time_values = [datetime.fromisoformat(np.datetime_as_string(dt, unit='s')) for dt in time_values]
   return time_values
 
-def get_longitude_values(name_in_dataset='longitude'):
+def get_longitude_values():
+  lon_dim = global_vars.lon_dim
   dataset = global_vars.current_project_dataset
-  longitude_values = dataset.coords[name_in_dataset].values
+  longitude_values = dataset.coords[lon_dim].values
   return longitude_values
 
-def get_latitude_values(name_in_dataset='latitude'):
+def get_latitude_values():
+  lat_dim = global_vars.lat_dim
   dataset = global_vars.current_project_dataset
-  latitude_values = dataset.coords[name_in_dataset].values
+  latitude_values = dataset.coords[lat_dim].values
   return latitude_values
 
 def get_variables_long_names():
