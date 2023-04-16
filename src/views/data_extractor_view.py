@@ -523,10 +523,10 @@ class DataExtractorView(ScrollableView):
 
     # img_path = Path(ASSETS_DIR, 'images', 'map-example-2.png')
     map_img = Image.open(chart_builder._chart.get_buffer())
-    max_height = 600
+    max_width = 800 
     original_width, original_height = map_img.size
-    new_width = int(original_width * max_height / original_height)
-    img_resized = map_img.resize((new_width, max_height), Image.ANTIALIAS)
+    new_height = int(original_height * max_width / original_width) 
+    img_resized = map_img.resize((max_width, new_height), Image.ANTIALIAS) 
     self.map_img = ImageTk.PhotoImage(img_resized)
     map_img_label = ttk.Label(map_wrapper_frame, image=self.map_img)
     map_img_label.pack(pady=(10, 0))
