@@ -6,6 +6,7 @@ import utils.general_utils as gen_utils
 import utils.basic_form_fields as form_fields
 import utils.global_variables as global_vars
 import utils.project_manager as prj_mgmt
+from siaplotlib.processing import wrangling as plot_wrangling
 
 class DatasetInfoView(ScrollableView):
   def __init__(self, master):
@@ -24,7 +25,7 @@ class DatasetInfoView(ScrollableView):
     view_title_label.pack(pady=10)
 
     columns_frame = ttk.Frame(self.scroll_frame)
-    columns_frame.pack(fill='both', expand=1, padx=50)
+    columns_frame.pack(fill='both', expand=1, padx=30)
 
     # Column 1
 
@@ -34,7 +35,7 @@ class DatasetInfoView(ScrollableView):
     title_label = ttk.Label(info_frame, text='Metadatos', font=('Helvetica', 14))
     title_label.pack(pady=10)
 
-    info_text = ttk.Text(info_frame, wrap='word', font=('Helvetica', 12), width=90)
+    info_text = ttk.Text(info_frame, wrap='word', font=('Helvetica', 10))
     info_text.pack(fill='both', expand=1, pady=20)
 
     info_text.insert('end', dataset_utils.get_dataset_info())
@@ -148,6 +149,17 @@ class DatasetInfoView(ScrollableView):
 
     project_path = global_vars.current_project_path
     prj_mgmt.save_dataset_config(project_path, time_dim, depth_dim, lon_dim, lat_dim, northward_var, eastward_var)
+
+    if global_vars.northward_var != None and global_vars.northward_var != 'No definido' and \
+      global_vars.eastward_var != None and global_vars.eastward_var != 'No definido':
+      single_vel_var_name = 'single_velocity'
+      # Calculate unique velocity and load to project dataset
+      plot_wrangling.calc_unique_velocity(
+        dataset=global_vars.current_project_dataset,
+        eastward_var_name=global_vars.eastward_var,
+        northward_var_name=global_vars.northward_var,
+        unique_velocity_name=single_vel_var_name
+      )
 
     tk.messagebox.showinfo(title='Información', message='Configuración guardada correctamente.')
 

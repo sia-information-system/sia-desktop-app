@@ -14,7 +14,7 @@ from siaplotlib.chart_building import level_chart
 from siaplotlib.chart_building.base_builder import ChartBuilder
 from siaplotlib.charts.raw_image import ChartImage
 from siaplotlib.processing import computations
-from siaplotlib.processing import wrangling
+from siaplotlib.processing import wrangling as plot_wrangling
 
 class WindRoseView(TabView):
   def __init__(self, master, project_path, worksheet_name):
@@ -30,7 +30,7 @@ class WindRoseView(TabView):
       eastward_var_name = self.eastward_var,
       northward_var_name = self.northward_var
     )
-    speed = wrangling.drop_nan(dataset = speed)
+    speed = plot_wrangling.drop_nan(dataset = speed)
     self.dataset_min_speed = gen_utils.round_ceil(speed.min(), decimals=4)
     self.dataset_max_speed = gen_utils.round_floor(speed.max(), decimals=4)
 

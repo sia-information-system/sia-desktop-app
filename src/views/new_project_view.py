@@ -31,13 +31,14 @@ class NewProjectView(ttk.Frame):
 
     # Form.
     form_frame = ttk.Frame(self, bootstyle='default')
-    form_frame.pack(fill='x', padx=100, pady=10)
+    form_frame.pack(fill='x', padx=500, pady=20)
 
     form_entries_frame = ttk.Frame(form_frame)
     form_entries_frame.pack(fill='x')
 
     title_entry = self.__create_name_project_row(form_entries_frame)
-    self.__create_options_to_get_data_row(form_entries_frame)
+    # Hidden until the option is implemented. # TODO:
+    # self.__create_options_to_get_data_row(form_entries_frame)
     self.__create_select_dataset_row(form_entries_frame)
 
     # Create project button.

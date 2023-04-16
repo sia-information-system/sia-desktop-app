@@ -6,7 +6,8 @@ import utils.general_utils as gen_utils
 import utils.global_variables as global_vars
 from utils.global_constants import HOME_PROJECTS_DIR, PROJECT_EXTENSION
 from tkinter.filedialog import askopenfilename
-from siaextractlib.processing import wrangling
+from siaextractlib.processing import wrangling as ext_wrangling
+from siaplotlib.processing import wrangling as plot_wrangling
 
 def get_project_metadata_file_path(project_path):
   for filename in os.listdir(project_path):
@@ -36,6 +37,17 @@ def open_project(root_window):
   global_vars.lat_dim = dataset_config['dimensions']['lat']
   global_vars.northward_var = dataset_config['variables']['northward']
   global_vars.eastward_var = dataset_config['variables']['eastward']
+
+  if global_vars.northward_var != None and global_vars.northward_var != 'No definido' and \
+    global_vars.eastward_var != None and global_vars.eastward_var != 'No definido':
+    single_vel_var_name = 'single_velocity'
+    # Calculate unique velocity and load to project dataset
+    plot_wrangling.calc_unique_velocity(
+      dataset=global_vars.current_project_dataset,
+      eastward_var_name=global_vars.eastward_var,
+      northward_var_name=global_vars.northward_var,
+      unique_velocity_name=single_vel_var_name
+    )
 
   # Change to workspace view.
   workspace_view = gen_utils.find_view(root_window, 'WorkspaceView')
@@ -122,7 +134,7 @@ def get_dataset_project(project_path):
     metadata = json.load(json_file)
     project_dataset_path = metadata['dataset']['fromProjectPath']
     dataset_path = pathlib.Path(project_path, project_dataset_path)
-    ds = wrangling.open_dataset(dataset_path)
+    ds = ext_wrangling.open_dataset(dataset_path)
     ds.close()
   return ds
 
