@@ -9,6 +9,8 @@ import utils.basic_form_fields as form_fields
 import utils.project_manager as prj_mgmt
 from views.templates.tab_view import TabView
 from siaplotlib.chart_building import level_chart
+from siaplotlib.chart_building.base_builder import ChartBuilder
+from siaplotlib.charts.raw_image import ChartImage
 from datetime import datetime
 
 class ContourMapView(TabView):
@@ -614,6 +616,17 @@ class ContourMapView(TabView):
       self.end_date_entry.entry.insert(0, parameters['end_date'])
 
       img_path = pathlib.Path(global_vars.current_project_path, chart_img_rel_path)
+      # Restore chart builder.
+      chart_builder = ChartBuilder(
+        dataset=None,
+        log_stream=sys.stderr,
+        verbose=True)
+      chart_image = ChartImage(
+        img_source=img_path,
+        verbose=chart_builder.verbose,
+        log_stream=chart_builder.log_stream)
+      chart_builder._chart = chart_image
+      self.chart_builder = chart_builder
 
       if parameters['build_method'] == 'Estático':
         self.__build_method = 'static'

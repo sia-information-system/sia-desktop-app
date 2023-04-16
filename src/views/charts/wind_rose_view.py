@@ -11,6 +11,8 @@ import utils.project_manager as prj_mgmt
 from datetime import datetime
 from views.templates.tab_view import TabView
 from siaplotlib.chart_building import level_chart
+from siaplotlib.chart_building.base_builder import ChartBuilder
+from siaplotlib.charts.raw_image import ChartImage
 from siaplotlib.processing import computations
 from siaplotlib.processing import wrangling
 
@@ -416,6 +418,18 @@ class WindRoseView(TabView):
       self.speed_legend_step_entry.insert(0, parameters['speed_legend_step'])
 
       img_path = pathlib.Path(global_vars.current_project_path, chart_img_rel_path)
+      # Restore chart builder.
+      chart_builder = ChartBuilder(
+        dataset=None,
+        log_stream=sys.stderr,
+        verbose=True)
+      chart_image = ChartImage(
+        img_source=img_path,
+        verbose=chart_builder.verbose,
+        log_stream=chart_builder.log_stream)
+      chart_builder._chart = chart_image
+      self.chart_builder = chart_builder
+
       self.show_static_chart_img(img_path)
 
       self.show_chart_info(chart_subset_info)
