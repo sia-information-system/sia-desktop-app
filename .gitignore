@@ -4,5 +4,4 @@
 # Configuration files
 etc/config.ini
 
-# Dowloads
-downloads/
+tmp/
