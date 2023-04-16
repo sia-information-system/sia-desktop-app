@@ -1,8 +1,10 @@
 import os
 import pathlib
+import math
 import sys
 import ttkbootstrap as ttk
 from configparser import ConfigParser
+import utils.global_variables as global_vars
 
 def read_config():
   config_path = pathlib.Path(
@@ -75,3 +77,19 @@ def clear_view(view):
 
   # Clear view, do not destroy the view (frame) itself just hide it.
   view.pack_forget()
+
+def round_ceil(number, decimals=0):
+  multiplier = 10 ** decimals
+  return math.ceil(number * multiplier) / multiplier
+
+def round_floor(number, decimals=0):
+  multiplier = 10 ** decimals
+  return math.floor(number * multiplier) / multiplier
+
+def is_project_loaded():
+  return global_vars.current_project_path and global_vars.current_project_dataset
+
+def is_project_configured():
+  return (global_vars.time_dim and global_vars.depth_dim and \
+    global_vars.lon_dim and global_vars.lat_dim and \
+    global_vars.northward_var and global_vars.eastward_var)

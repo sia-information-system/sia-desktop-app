@@ -1,29 +1,32 @@
 import pathlib
+import re
+import sys
 import tkinter as tk
 import ttkbootstrap as ttk
 import utils.dataset_utils as dataset_utils
 import utils.global_variables as global_vars
-from ttkbootstrap.tooltip import ToolTip
+import utils.basic_form_fields as form_fields
+import utils.project_manager as prj_mgmt
 from views.templates.tab_view import TabView
-from omdepplotlib.chart_building import line_chart
-from PIL import ImageTk, Image
+from siaplotlib.chart_building import line_chart
+from siaplotlib.chart_building.base_builder import ChartBuilder
+from siaplotlib.charts.raw_image import ChartImage
 from datetime import datetime
 
 class SinglePointTimeSeriesView(TabView):
-  def __init__(self, master):
+  def __init__(self, master, project_path, worksheet_name):
     super().__init__(master, chart_type='TIME_SERIES')
-    self.variable_list = dataset_utils.get_variables()
+    self.project_path = project_path
+    self.worksheet_name = worksheet_name
+
+    self.variables_long_names = dataset_utils.get_variables_long_names()
+    self.variables_units = dataset_utils.get_variables_units()
     self.depth_list = dataset_utils.get_depth_values()
+    self.dataset_lon_values = dataset_utils.get_longitude_values()
+    self.dataset_lat_values = dataset_utils.get_latitude_values()
+    self.dataset_date_values = dataset_utils.get_time_values()
 
     self.__progress_bar = None
-    # TODO: Revisar de donde sacar lo de los labels.
-    self.plot_measure_label = {
-      'thetao': 'Temperature (C°)',
-      'vo': 'Northward velocity (m/s)',
-      'uo': 'Eastward velocity (m/s)',
-      'so': 'Salinity (PSU)',
-      'zos': 'Sea surface height (m)'
-    }
 
   def load_view(self):
     self.pack(fill='both', expand=1)
@@ -36,46 +39,59 @@ class SinglePointTimeSeriesView(TabView):
 
     # Form.
     form_frame = ttk.Frame(self.col2_user_params_frame, bootstyle='default')
-    form_frame.pack(fill='x', padx=30, pady=10)
+    form_frame.pack(fill='x', padx=20, pady=10)
 
     form_entries_frame = ttk.Frame(form_frame)
     form_entries_frame.pack(fill='x')
 
     label_text = 'Variable:'
-    variable_cb = self.__create_combobox_row(form_entries_frame, label_text, self.variable_list)
+    options = list(self.variables_long_names.keys())
+    self.variable_cb = form_fields.create_combobox_row(form_entries_frame, label_text, options)
 
     label_text = 'Profundidad(es) [m]:'
-    default_depth = self.depth_list[0]
-    depth1_cb = self.__create_combobox_row(form_entries_frame, label_text, self.depth_list, default_depth)
-    depth2_cb = self.__create_combobox_row(form_entries_frame, ' ', self.depth_list, readonly=False)
-    depth3_cb = self.__create_combobox_row(form_entries_frame, ' ', self.depth_list, readonly=False)
-    depth4_cb = self.__create_combobox_row(form_entries_frame, ' ', self.depth_list, readonly=False)
-    depth5_cb = self.__create_combobox_row(form_entries_frame, ' ', self.depth_list, readonly=False)
+    self.depth_cb_list = form_fields.MultipleCombobox(
+      form_entries_frame, 
+      label_text, 
+      self.depth_list, 
+      readonly=True
+    )
 
     label_text = 'Título del gráfico:'
-    chart_title_entry = self.__create_entry_row(form_entries_frame, label_text)
+    self.chart_title_entry = form_fields.create_entry_row(form_entries_frame, label_text)
 
     label_text = 'Longitud:'
-    longitude_entry = self.__create_entry_row(form_entries_frame, label_text)
+    self.longitude_entry = form_fields.create_entry_row(form_entries_frame, label_text)
 
     label_text = 'Latitud: '
-    latitude_entry = self.__create_entry_row(form_entries_frame, label_text)
+    self.latitude_entry = form_fields.create_entry_row(form_entries_frame, label_text)
 
+    min_dataset_date = min(self.dataset_date_values).date()
     label_text = 'Fecha de inicio:'
-    start_date_entry = self.__create_date_entry_row(form_entries_frame, label_text)
-    label_text = 'Fecha de fin:'
-    end_date_entry = self.__create_date_entry_row(form_entries_frame, label_text)
+    self.start_date_entry = form_fields.create_date_entry_row(form_entries_frame, label_text)
+    self.start_date_entry.entry.delete(0, 'end')
+    self.start_date_entry.entry.insert(0, min_dataset_date)
 
+    max_dataset_date = max(self.dataset_date_values).date()
+    label_text = 'Fecha de fin:'
+    self.end_date_entry = form_fields.create_date_entry_row(form_entries_frame, label_text)
+    self.end_date_entry.entry.delete(0, 'end')
+    self.end_date_entry.entry.insert(0, max_dataset_date)
+
+    # Restore previous values from the project file if was configured.
+    self.__restore_params_and_img_if_apply()
 
     # Apply button.
     connect_button = ttk.Button(
       form_frame, 
       text='Generar gráfico', 
       command=lambda: self.__start_creation_chart(
-        variable_cb.get(),
-        [depth1_cb.get(), depth2_cb.get(), depth3_cb.get(), depth4_cb.get(), depth5_cb.get()],
-        chart_title_entry.get(), longitude_entry.get(), latitude_entry.get(),
-        start_date=start_date_entry.entry.get(), end_date=end_date_entry.entry.get() 
+        self.variable_cb.get(), 
+        self.depth_cb_list.get(),
+        self.chart_title_entry.get(), 
+        self.longitude_entry.get(), 
+        self.latitude_entry.get(),
+        start_date=self.start_date_entry.entry.get(), 
+        end_date=self.end_date_entry.entry.get() 
       )
     )
     connect_button.pack(pady=10)
@@ -85,67 +101,10 @@ class SinglePointTimeSeriesView(TabView):
       maximum=40, 
       mode='determinate',
       length=100,
-      value=20,
+      value=0,
       bootstyle='success striped'
     )
-    self.__show_and_run_progress_bar()
-
-  def __create_combobox_row(self, master, label_text, options, default_option=None, readonly=True):
-    row_frame = ttk.Frame(master, bootstyle='default')
-    row_frame.pack(fill='x', pady=5)
-
-    label_frame = ttk.Frame(row_frame)
-    label_frame.pack(fill='x', side='left')
-    title_label = ttk.Label(label_frame, text=label_text, width=25)
-    title_label.pack(fill='x')
-
-    combobox_frame = ttk.Frame(row_frame)
-    combobox_frame.pack(fill='x', side='right', expand=1)
-    state = 'readonly' if readonly else 'normal'
-    combobox = ttk.Combobox(combobox_frame, values=options, state=state, width=35)
-    if default_option != None:
-      combobox.set(default_option)
-    combobox.pack(fill='x')
-
-    return combobox
-
-  def __create_entry_row(self, master, label_text):
-    row_frame = ttk.Frame(master, bootstyle='default')
-    row_frame.pack(fill='x', pady=5)
-
-    label_frame = ttk.Frame(row_frame)
-    label_frame.pack(fill='x', side='left')
-    title_label = ttk.Label(label_frame, text=label_text, width=25)
-    title_label.pack(fill='x')
-
-    entry_frame = ttk.Frame(row_frame)
-    entry_frame.pack(fill='x', side='right', expand=1)
-    entry = ttk.Entry(entry_frame, width=35)
-    entry.pack(fill='x')
-
-    return entry
-
-  def __create_date_entry_row(self, master, label_text):
-    row_frame = ttk.Frame(master, bootstyle='default')
-    row_frame.pack(fill='x', pady=5)
-
-    label_frame = ttk.Frame(row_frame)
-    label_frame.pack(fill='x', side='left')
-    title_label = ttk.Label(label_frame, text=label_text, width=25)
-    title_label.pack(fill='x')
-
-    date_entry_frame = ttk.Frame(row_frame)
-    date_entry_frame.pack(side='left')
-    date_entry = ttk.DateEntry(date_entry_frame, dateformat='%Y-%m-%d')
-    date_entry.pack()
-
-    tooltip_label = ttk.Label(row_frame, text='Info')
-    tooltip_label.pack(side='left', padx=10)
-    text_info = 'Clic izquierdo en la flecha para mover el calendario un mes.\n'
-    text_info += 'Clic derecho en la flecha para mover el calendario un año.'
-    ToolTip(tooltip_label, text=text_info, bootstyle='info-inverse')
-
-    return date_entry
+    self.__progress_bar.pack(pady=10)
 
   def __start_creation_chart(
     self,
@@ -157,35 +116,31 @@ class SinglePointTimeSeriesView(TabView):
     start_date,
     end_date
   ):
-    print('-----------------------------')
-    print(f'variable: "{variable}"')
-    print(f'depths: "{depths}"')
-    print(f'chart_title: "{chart_title}"')
-    print(f'longitude: "{longitude}"')
-    print(f'latitude: "{latitude}"')
-    print(f'start_date: "{start_date}"')
-    print(f'end_date: "{end_date}"')
+    print('-----------------------------', file=sys.stderr)
+    print(f'variable: "{variable}"', file=sys.stderr)
+    print(f'depths: "{depths}"', file=sys.stderr)
+    print(f'chart_title: "{chart_title}"', file=sys.stderr)
+    print(f'longitude: "{longitude}"', file=sys.stderr)
+    print(f'latitude: "{latitude}"', file=sys.stderr)
+    print(f'start_date: "{start_date}"', file=sys.stderr)
+    print(f'end_date: "{end_date}"', file=sys.stderr)
 
-    self.__show_and_run_progress_bar()
+    # Hide column 2 with the chart and buttons.
     self.chart_and_btns_frame.pack_forget()
-
-    valid_fields = self.__fields_validation(variable, [0,1,2], chart_title, longitude, latitude, 
+    # Validations.
+    valid_fields = self.__fields_validation(variable, depths, chart_title, longitude, latitude, 
       start_date, end_date)
     if not valid_fields:
       return
+    # Start progress bar.
+    self.__start_progress_bar()
 
     try:
-      dataset = global_vars.current_project_dataset
-      self.chart_builder = line_chart.SinglePointTimeSeriesBuilder(dataset=dataset)
-
       self.__generate_static_chart(variable, depths, chart_title, longitude, latitude, 
         start_date, end_date)
-
-      self.__stop_and_hide_progress_bar()
-      self.chart_and_btns_frame.pack(fill='both', expand=1)
-    except Exception as e:
-      print(f'Error: {e}')
-      pass
+    except Exception as err:
+      self.__stop_progress_bar()
+      tk.messagebox.showerror(title='Error', message=err)
 
   def __generate_static_chart(
     self,
@@ -197,43 +152,71 @@ class SinglePointTimeSeriesView(TabView):
     start_date,
     end_date
   ):
+    print(f'-> Static Time series image for "{variable}" variable.', file=sys.stderr)
+    dataset = global_vars.current_project_dataset
+    var_name = self.variables_long_names[variable]
     date_range = slice(start_date, end_date)
-    grouping_dim_name = 'depth'
-    depths = [int(depth) for depth in depths if depth.isdigit()]
+    grouping_dim_name = None
+    depths = [float(depth) for depth in depths]
+
     dim_constraints = {
-      'time': date_range,
-      'depth': depths,
-      'latitude': latitude,
-      'longitude': longitude
+      self.time_dim: date_range,
+      self.lat_dim: latitude,
+      self.lon_dim: longitude
     }
-    if variable == 'zos':
-      dim_constraints = {
-        'time': date_range,
-        'latitude': latitude,
-        'longitude': longitude
-      }
-      grouping_dim_name=None
-    print(f'-> Static Time series image for "{variable}" variable.')
-    self.chart_builder.build_static(
-      var_name=variable,
-      title=chart_title,
-      var_label=self.plot_measure_label[variable],
+    if len(depths) > 0:
+      dim_constraints[self.depth_dim] = depths
+      grouping_dim_name = self.depth_dim
+
+    self.chart_builder = line_chart.SinglePointTimeSeriesBuilder(
+      dataset=dataset,
+      var_name=var_name,
+      title=chart_title.strip(),
+      var_label=f'{variable} [{self.variables_units[var_name]}]',
       dim_constraints=dim_constraints,
-      lat_dim_name='latitude', # TODO: Solicitar al usuario.
-      lon_dim_name='longitude', # TODO: Solicitar al usuario.
+      lat_dim_name=self.lat_dim,
+      lon_dim_name=self.lon_dim,
       grouping_dim_label='Depth (m)',
-      grouping_dim_name=grouping_dim_name, # TODO: Solicitar al usuario.
+      grouping_dim_name=grouping_dim_name,
       time_dim_label='Dates',
-      time_dim_name='time', # TODO: Solicitar al usuario.
+      time_dim_name=self.time_dim,
+    )
+    self.chart_builder.build(
+      success_callback=self.__static_success_build_callback, 
+      failure_callback=self.__static_failure_build_callback
     )
 
-    img_buffer = self.chart_builder._chart.get_buffer()
-    self.chart_img = ImageTk.PhotoImage(Image.open(img_buffer))
-    self.chart_img_label.configure(image=self.chart_img)
-    # Hide button to play gif.
-    self.play_chart_btn.pack_forget()
+  def __static_success_build_callback(self, chart_builder, subset):
+    print(f'-> Image built.', file=sys.stderr)
+    img_buffer = chart_builder._chart.get_buffer()
+    self.show_static_chart_img(img_buffer)
 
-  # TODO: Validar depths
+    chart_img_rel_path = self.save_current_img_chart(self.worksheet_name, '.png')
+    print(f'-> Static chart image saved in "{chart_img_rel_path}"', file=sys.stderr)
+    chart_subset_info = dataset_utils.dataarray_info(subset)
+    self.show_chart_info(chart_info=chart_subset_info)
+    print(f'-> Chart info extracted and displayed.', file=sys.stderr)
+    self.__save_chart_parameters_and_img(chart_img_rel_path, chart_subset_info)
+    print(f'-> Current state saved. Parameters, chart image and chart info.', file=sys.stderr)
+
+    self.__stop_progress_bar()
+    self.chart_and_btns_frame.pack(fill='both', expand=1)
+
+  def __static_failure_build_callback(self, err):
+    print('--- An error ocurr while building the chart. ---', file=sys.stderr)
+    print(err, file=sys.stderr)
+
+    err_msg = 'Ocurrió un error al generar el gráfico.\n'
+    if 'is not a valid dimension or coordinate' in str(err):
+      dimension_pattern = r"'(.*?)'" # The dimension is wrapped in single quotes.
+      dimension_err = re.findall(dimension_pattern, str(err))
+      err_msg += f'Para la variable en uso, la dimensión {dimension_err[0]} no es válida.'
+    else:
+      err_msg += 'Revisa nuevamente los parámetros de creación del gráfico.'
+
+    self.__stop_progress_bar()
+    tk.messagebox.showerror(title='Error', message=err_msg)
+
   def __fields_validation(
     self, 
     variable, 
@@ -246,20 +229,45 @@ class SinglePointTimeSeriesView(TabView):
   ):
     chart_title = chart_title.strip()
     
+    # Empty fields validation.
     empty_fields = []
     if variable == '': empty_fields.append('Variable')
+    # if len(depths) == 0: empty_fields.append('Profundidad(es)')
     if chart_title == '': empty_fields.append('Título del gráfico')
     if longitude == '': empty_fields.append('Longitud')
     if latitude == '': empty_fields.append('Latitud')
+    if start_date == '': empty_fields.append('Fecha inicial')
+    if end_date == '': empty_fields.append('Fecha final')
 
+    if len(empty_fields) > 0:
+      message = 'Todos los campos son obligatorios. Datos faltantes: \n'
+      message += ', '.join(empty_fields)
+      tk.messagebox.showerror(title='Error', message=message)
+      return False
+
+    # Validate depths
+    try:
+      if len(depths) != len(set(depths)):
+        raise Exception('Profundidades duplicadas. Asegúrese de que no haya profundidades repetidas.')
+
+      for depth in depths:
+        if depth == '':
+          message = 'Profundidad(es) sin valor, asegúrese de que cada profundidad tenga un valor.'
+          message += ' Si no desea especificar una profundidad, elimínela.'
+          raise Exception(message)
+          break
+    except Exception as e:
+      tk.messagebox.showerror(title='Error', message=e)
+      return False
+
+    # Validate longitude and latitude type and range.
     try:
       point_lon = float(longitude)
       point_lat = float(latitude)
 
-      dataset_lon_values = dataset_utils.get_longitude_values()
-      min_dataset_lon, max_dataset_lon = min(dataset_lon_values), max(dataset_lon_values)
-      dataset_lat_values = dataset_utils.get_latitude_values()
-      min_dataset_lat, max_dataset_lat = min(dataset_lat_values), max(dataset_lat_values)
+      min_dataset_lon, max_dataset_lon = min(self.dataset_lon_values), max(self.dataset_lon_values)
+      min_dataset_lat, max_dataset_lat = min(self.dataset_lat_values), max(self.dataset_lat_values)
+
       if point_lon < min_dataset_lon or point_lon > max_dataset_lon or \
         point_lat < min_dataset_lat or point_lat > max_dataset_lat:
         message = 'La longitud y la latitud deben estar dentro del rango del dataset.\n'
@@ -272,10 +280,7 @@ class SinglePointTimeSeriesView(TabView):
       tk.messagebox.showerror(title='Error', message=message)
       return False
 
-    if start_date == '' or start_date == None:
-      empty_fields.append('Fecha inicial')
-    if end_date == '' or end_date == None:
-      empty_fields.append('Fecha final')
+    # Validate start and end dates format.
     try:
       start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
       end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
@@ -283,35 +288,80 @@ class SinglePointTimeSeriesView(TabView):
       message = 'Las fechas deben tener el formato "YYYY-MM-DD".'
       tk.messagebox.showerror(title='Error', message=message)
       return False
+
+    # Validate start and end dates order.
     if start_date >= end_date:
       message = 'La fecha inicial debe ser menor a la fecha final.'
       tk.messagebox.showerror(title='Error', message=message)
       return False
 
-    dataset_date_values = dataset_utils.get_time_values()
-    min_dataset_date = dataset_date_values[0].date()
-    max_dataset_date = dataset_date_values[-1].date()
+    # Validate start and end dates range.
+    min_dataset_date = min(self.dataset_date_values).date()
+    max_dataset_date = max(self.dataset_date_values).date()
     if end_date < min_dataset_date or start_date > max_dataset_date:
       message = 'Las fechas deben estar dentro del rango de fechas del dataset. '
       message += f'El rango de fechas del dataset va del {min_dataset_date} hasta el {max_dataset_date}.'
       tk.messagebox.showerror(title='Error', message=message)
       return False
 
-    if len(empty_fields) > 0:
-      message = 'Todos los campos son obligatorios. Datos faltantes: \n'
-      message += ', '.join(empty_fields)
-      tk.messagebox.showerror(title='Error', message=message)
-      return False
-
     return True
 
-  def __show_and_run_progress_bar(self):
-    # print('se llamo a show progress bar')
-    self.__progress_bar.pack(pady=10)
+  def __start_progress_bar(self):
     self.__progress_bar.start()
 
-  def __stop_and_hide_progress_bar(self):
-    pass
-    # print('se llamo a stop and hide progress bar')
-    # self.__progress_bar.stop()
-    # self.__progress_bar.pack_forget()
+  def __stop_progress_bar(self):
+    self.__progress_bar.stop()
+
+  def __save_chart_parameters_and_img(self, chart_img_rel_path, chart_subset_info):
+    parameters = {
+      'variable': self.variable_cb.get(),
+      'depths': self.depth_cb_list.get(),
+      'chart_title': self.chart_title_entry.get(),
+      'longitude': self.longitude_entry.get(),
+      'latitude': self.latitude_entry.get(),
+      'start_date': self.start_date_entry.entry.get(),
+      'end_date': self.end_date_entry.entry.get()
+    }
+
+    prj_mgmt.save_chart_parameters_and_img(
+      self.project_path, 
+      self.worksheet_name, 
+      parameters, 
+      chart_img_rel_path,
+      chart_subset_info
+    )
+
+  def __restore_params_and_img_if_apply(self):
+    chart_data = prj_mgmt.get_chart_parameters_and_img(self.project_path, self.worksheet_name)
+    parameters = chart_data['parameters']
+    chart_img_rel_path = chart_data['chart_img_rel_path']
+    chart_subset_info = chart_data['chart_subset_info']
+
+    if len(parameters) > 0:
+      self.variable_cb.set(parameters['variable'])
+      for depth in parameters['depths']:
+        self.depth_cb_list.add_cb(self.depth_list, default_option=depth)
+      self.chart_title_entry.insert(0, parameters['chart_title'])
+      self.longitude_entry.insert(0, parameters['longitude'])
+      self.latitude_entry.insert(0, parameters['latitude'])
+      self.start_date_entry.entry.delete(0, 'end')
+      self.start_date_entry.entry.insert(0, parameters['start_date'])
+      self.end_date_entry.entry.delete(0, 'end')
+      self.end_date_entry.entry.insert(0, parameters['end_date'])
+
+      img_path = pathlib.Path(global_vars.current_project_path, chart_img_rel_path)
+      # Restore chart builder.
+      chart_builder = ChartBuilder(
+        dataset=None,
+        log_stream=sys.stderr,
+        verbose=True)
+      chart_image = ChartImage(
+        img_source=img_path,
+        verbose=chart_builder.verbose,
+        log_stream=chart_builder.log_stream)
+      chart_builder._chart = chart_image
+      self.chart_builder = chart_builder
+
+      self.show_static_chart_img(img_path)
+
+      self.show_chart_info(chart_subset_info)
