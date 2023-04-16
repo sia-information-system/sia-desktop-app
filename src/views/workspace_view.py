@@ -175,24 +175,9 @@ class WorkspaceView(ttk.Frame):
     label = ttk.Label(frame, text=label_text, font=('TkDefaultFont', 12))
     label.pack(pady=30)
 
-    buttons_frame = ttk.Frame(frame)
-    buttons_frame.pack(pady=10)
-
-    redirect_to_data_info_button = ttk.Button(
-      buttons_frame,
-      text='Ir a "Información de datos"',
-      command=self.__redirect_to_dataset_information,
-      bootstyle='default',
-      width=30
-    )
-    redirect_to_data_info_button.pack(pady=10, padx=(0, 10), side='left')
-
     return frame
 
   def __redirect_to_create_project(self):
     new_project_view = gen_utils.find_view(self.root_window, 'NewProjectView')
     gen_utils.change_view(self.root_window, new_project_view)
 
-  def __redirect_to_dataset_information(self):
-    new_project_view = gen_utils.find_view(self.root_window, 'DatasetInfoView')
-    gen_utils.change_view(self.root_window, new_project_view)

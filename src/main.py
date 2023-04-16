@@ -24,13 +24,15 @@ class App:
     # Create main views ('windows') for each option in the menu bar that required a window.
     self.new_project_view = NewProjectView(self.window)
     self.workspace_view = WorkspaceView(self.window)
-    self.dataset_info_view = DatasetInfoView(self.window)
     self.data_extractor_view = DataExtractorView(self.window)
     self.user_manual_view = UserManualView(self.window)
 
     # Menu bar.
     self.__menu_bar = tk.Menu(self.window)
     self.__create_menu_bar()
+
+    # Popup where is show DatasetInfoView.
+    self.data_info_popup_window = None
 
     gen_utils.change_view(self.window, self.home_view)
 
@@ -60,7 +62,7 @@ class App:
 
     # Create 'Información de datos' menu option.
     dataset_info_menu = tk.Menu(self.__menu_bar, tearoff=False)
-    self.__menu_bar.add_command(label='Información de datos', command=lambda: gen_utils.change_view(self.window, self.dataset_info_view))
+    self.__menu_bar.add_command(label='Información de datos', command=self.__open_dataset_info_view_popup)
 
     # Create 'Extracción de datos' menu option.
     data_extractor_menu = tk.Menu(self.__menu_bar, tearoff=False)
@@ -73,6 +75,35 @@ class App:
   def __on_close_app(self):
     if tk.messagebox.askokcancel('Salir', '¿Quieres salir de la aplicación?'):
       self.window.quit()
+
+  def __open_dataset_info_view_popup(self):
+    # If the popup window is not open, create it.
+    if self.data_info_popup_window is None:
+      self.data_info_popup_window = tk.Toplevel()
+      self.data_info_popup_window.title('Información del conjunto de datos')
+
+      # Get screen dimensions
+      screen_width = self.data_info_popup_window.winfo_screenwidth()
+      screen_height = self.data_info_popup_window.winfo_screenheight()
+      # Calculate desired size of the popup window
+      popup_width = int(screen_width * 0.9)  # 90% of screen width
+      popup_height = int(screen_height * 0.8)  # 80% of screen height
+      # Set the dimensions of the popup window
+      self.data_info_popup_window.geometry(f"{popup_width}x{popup_height}+{int(screen_width*0.05)}+{int(screen_height*0.1)}")
+
+      dataset_info_view = DatasetInfoView(self.data_info_popup_window, self.window)
+      dataset_info_view.load_view()
+
+      # When the popup window is closed, set the reference to None.
+      self.data_info_popup_window.protocol('WM_DELETE_WINDOW', self.__close_dataset_info_view_popup)
+
+    # If the popup window is already open, just show it, do not create a new one.
+    else:
+      self.data_info_popup_window.deiconify()
+
+  def __close_dataset_info_view_popup(self):
+    self.data_info_popup_window.destroy()
+    self.data_info_popup_window = None
 
 #  ------------------ Main ------------------
 

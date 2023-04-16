@@ -9,8 +9,9 @@ import utils.project_manager as prj_mgmt
 from siaplotlib.processing import wrangling as plot_wrangling
 
 class DatasetInfoView(ScrollableView):
-  def __init__(self, master):
+  def __init__(self, master, root_app_window):
     super().__init__(master)
+    self.root_window = root_app_window # Main window. Used to change views.
 
     self.dimensions_list = dataset_utils.get_dimensions()
     self.variable_list = dataset_utils.get_variables()
@@ -160,6 +161,10 @@ class DatasetInfoView(ScrollableView):
         northward_var_name=global_vars.northward_var,
         unique_velocity_name=single_vel_var_name
       )
+
+    # Reload workspace view in main window.
+    workspace_view = gen_utils.find_view(self.root_window, 'WorkspaceView')
+    gen_utils.change_view(self.root_window, workspace_view)
 
     tk.messagebox.showinfo(title='Información', message='Configuración guardada correctamente.')
 
