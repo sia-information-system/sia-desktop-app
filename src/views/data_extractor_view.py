@@ -210,7 +210,7 @@ class DataExtractorView(ScrollableView):
       self.dinamic_form_fields_frame = None
 
     # Validations.
-    if data_source == '' or username == '' or password == '':
+    if data_source == '' or username == '' or password == '' or opendap_link == '':
       tk.messagebox.showerror(title='Error', message='Todos los campos son obligatorios.')
       return False
     if data_source not in self.data_sources:
@@ -356,7 +356,11 @@ class DataExtractorView(ScrollableView):
           label_min = f'{dname} min:'
           label_max = f'{dname} max:'
           start_date_entry = form_fields.create_date_entry_row(parent_frame, label_min, label_width=30)
+          start_date_entry.entry.delete(0, 'end')
+          start_date_entry.entry.insert(0, str(dim.min().values)[:10])
           end_date_entry = form_fields.create_date_entry_row(parent_frame, label_max, label_width=30)
+          end_date_entry.entry.delete(0, 'end')
+          end_date_entry.entry.insert(0, str(dim.max().values)[:10])
           self.dim_params.append(DimParam(
             dim_name=d,
             input_min=start_date_entry.entry,
@@ -379,8 +383,6 @@ class DataExtractorView(ScrollableView):
           dim_label=dname,
           expected_type_label='Texto'))
     
-    # Start drawing the map
-    self.__update_map()
     # Btn to redraw the map
     self.draw_map_button = ttk.Button(
       parent_frame, 
@@ -389,6 +391,8 @@ class DataExtractorView(ScrollableView):
       command=lambda: self.__update_map_manually()
     )
     self.draw_map_button.pack(pady=(20, 0))
+    # Start drawing the map
+    self.__update_map()
     # Display vars titles
     title_vars = ttk.Label(parent_frame, text='Selecciona las variables a descarcar', font=('TkDefaultFont', 14))
     title_vars.pack(pady=10)
@@ -435,18 +439,19 @@ class DataExtractorView(ScrollableView):
     lat_min, lat_max, lon_min, lon_max, able_to_draw, = self.__get_region()
     if able_to_draw:
       if lat_min > lat_max:
-        tk.messagebox.showinfo(
+        tk.messagebox.showerror(
           title='No se puede actualizar el mapa',
           message=f'La latitud mínima no puede ser mayor que la latitud máxima.')
         return
       if lon_min > lon_max:
-        tk.messagebox.showinfo(
+        tk.messagebox.showerror(
           title='No se puede actualizar el mapa',
           message=f'La longitud mínima no puede ser mayor que la longitud máxima.')
+        return
       self.__draw_map(lat_min, lat_max, lon_min, lon_max)
     else:
       # Some fields may be missing or not be numbers.
-      tk.messagebox.showinfo(
+      tk.messagebox.showerror(
         title='No se puede actualizar el mapa',
         message=f'Verifica que todos los campos de latitud y longitud tengan valores válidos (números reales).')
   
@@ -499,14 +504,14 @@ class DataExtractorView(ScrollableView):
       success_callback=self.__region_map_success,
       failure_callback=self.__region_map_failure)
     if self.draw_map_button:
-      print('Disabling btn to drwa the map')
+      print('Disabling btn to draw the map')
       self.draw_map_button.configure(state='disabled')
 
 
   # TODO: Test this
   def __region_map_success(self, chart_builder: ChartBuilder):
     if self.draw_map_button:
-      print('Enabling btn to drwa the map')
+      print('Enabling btn to draw the map')
       self.draw_map_button.configure(state='enabled')
     # img_path = Path(ASSETS_DIR, 'images', 'map-example-2.png')
     # Destroy the frame.
@@ -534,7 +539,7 @@ class DataExtractorView(ScrollableView):
 
   def __region_map_failure(self, err: BaseException):
     if self.draw_map_button:
-      print('Enabling btn to drwa the map')
+      print('Enabling btn to draw the map')
       self.draw_map_button.configure(state='enabled')
     tk.messagebox.showerror(
       title='Información de conexión',
@@ -592,6 +597,52 @@ class DataExtractorView(ScrollableView):
           title='Validación de dimensiones',
           message=f'Para la dimensión {dim_param.dim_label} el valor mínimo y máximo deben estar dados o bien ambos deben omitirse.')
         return
+      if dim_min_val > dim_max_val:
+        tk.messagebox.showerror(
+          title='Validación de dimensiones',
+          message=f'Para la dimensión {dim_param.dim_label} el valor mínimo no puede ser mayor que el valor máximo.')
+        return
+
+      dim = self.extractor.dataset.coords[dim_param.dim_name]
+      if 'axis' in dim.attrs:
+        dim_axis = dim.attrs['axis']
+        # This is latitude and longitude dimensions.
+        if dim_axis == 'Y' or dim_axis == 'X':
+          ds_dim_min = float(dim.min())
+          ds_dim_max = float(dim.max())
+          if dim_min_val < ds_dim_min:
+            tk.messagebox.showerror(
+              title='Validación de dimensiones',
+              message=f'Para la dimensión {dim_param.dim_label} se ingreso un valor mínimo inferior al del dataset de {ds_dim_min}.')
+            return
+          if dim_max_val > ds_dim_max:
+            tk.messagebox.showerror(
+              title='Validación de dimensiones',
+              message=f'Para la dimensión {dim_param.dim_label} se ingreso un valor máximo superior al del dataset de {ds_dim_max}.')
+            return
+        elif dim_axis == 'T':
+          # This is time dimension.
+          try:
+            datetime.strptime(dim_min_val, '%Y-%m-%d').date()
+            datetime.strptime(dim_max_val, '%Y-%m-%d').date()
+          except:
+            tk.messagebox.showerror(
+              title='Error', 
+              message='Las fechas deben tener un formato "YYYY-MM-DD" válido.')
+            return False
+          ds_dim_min = str(dim.min().values)[:10]
+          ds_dim_max = str(dim.max().values)[:10]
+          if dim_min_val < ds_dim_min:
+            tk.messagebox.showerror(
+              title='Validación de dimensiones',
+              message=f'Para la dimensión {dim_param.dim_label} se ingreso un valor mínimo inferior al del dataset de {ds_dim_min}.')
+            return
+          if dim_max_val > ds_dim_max:
+            tk.messagebox.showerror(
+              title='Validación de dimensiones',
+              message=f'Para la dimensión {dim_param.dim_label} se ingreso un valor máximo superior al del dataset de {ds_dim_max}.')
+            return
+
       dim_constraints[dim_param.dim_name] = slice(dim_min_val, dim_max_val)
 
     print(f'Dimension constraints: {dim_constraints}', file=sys.stderr)
@@ -600,7 +651,7 @@ class DataExtractorView(ScrollableView):
     if dataset_name == '':
       tk.messagebox.showerror(
         title='Validaciones extra',
-        message=f'No nombre del archivo resultante no puede estar vacío.')
+        message=f'El nombre del archivo resultante no puede estar vacío.')
       return
 
     # Extraccion de datos.
@@ -608,8 +659,14 @@ class DataExtractorView(ScrollableView):
       print(data, end='', file=sys.stderr)
     log_stream = LogStream(callback=show_log)
 
-    requested_vars = [var_param.var_name for var_param in self.var_params]
+    requested_vars = [var_param.var_name for var_param in self.var_params if var_param.input.get()]
     print('Requested var list:', requested_vars, file=sys.stderr)
+
+    if len(requested_vars) == 0:
+      tk.messagebox.showerror(
+        title='Validaciones de variables',
+        message=f'No se ha seleccionado ninguna variable para descargar, por favor seleccione al menos una.')
+      return
 
     self.extractor.dim_constraints = dim_constraints
     self.extractor.requested_vars = requested_vars
