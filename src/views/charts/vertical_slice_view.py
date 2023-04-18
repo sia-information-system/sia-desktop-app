@@ -495,9 +495,9 @@ class VerticalSliceView(TabView):
           message = 'La latitud mínima debe ser menor a su valor máximo.'
           raise Exception(message)
 
-        if lat_min < min_dataset_lat or lat_max > max_dataset_lat or \
+        if lat_max < min_dataset_lat or lat_min > max_dataset_lat or \
           lon < min_dataset_lon or lon > max_dataset_lon:
-          message = 'La latitud y longitud deben estar dentro del rango del dataset.\n'
+          message = 'La longitud o latitud estan fuera de los rangos del dataset.\n'
           message += f'Rango de latitud: {min_dataset_lat}° a {max_dataset_lat}°.\n'
           message += f'Rango de longitud: {min_dataset_lon}° a {max_dataset_lon}°.\n'
           raise Exception(message)
@@ -517,9 +517,9 @@ class VerticalSliceView(TabView):
           message = 'La longitud mínima debe ser menor a su valor máximo.'
           raise Exception(message)
 
-        if lon_min < min_dataset_lon or lon_max > max_dataset_lon or \
+        if lon_max < min_dataset_lon or lon_min > max_dataset_lon or \
           lat < min_dataset_lat or lat > max_dataset_lat:
-          message = 'La latitud y longitud deben estar dentro del rango del dataset.\n'
+          message = 'La longitud o latitud estan fuera de los rangos del dataset.\n'
           message += f'Rango de latitud: {min_dataset_lat}° a {max_dataset_lat}°.\n'
           message += f'Rango de longitud: {min_dataset_lon}° a {max_dataset_lon}°.\n'
           raise Exception(message)
