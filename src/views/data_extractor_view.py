@@ -3,7 +3,7 @@ import tkinter as tk
 import numpy as np
 import sys
 import ttkbootstrap as ttk
-import inspect
+import traceback
 from tkinter import messagebox
 from ttkbootstrap.tooltip import ToolTip
 from pathlib import Path
@@ -85,6 +85,7 @@ class DataExtractorView(ScrollableView):
     self.map_frame: ttk.Frame = None
     self.map_wrapper_frame: ttk.Frame = None
     self.draw_map_button: ttk.Button = None
+    self.dataset_size_label: ttk.Label = None
 
 
   def load_view(self):
@@ -121,9 +122,9 @@ class DataExtractorView(ScrollableView):
     opendap_link_entry = form_fields.create_entry_row(form_frame, label, label_width=30, entry_width=35)
 
     # TODO: Remove default values. This is only for testing purposes.
-    # username_entry.insert(0, '')
-    # password_entry.insert(0, '')
-    # opendap_link_entry.insert(0, 'https://nrt.cmems-du.eu/thredds/dodsC/cmems_mod_glo_phy-cur_anfc_0.083deg_P1D-m')
+    username_entry.insert(0, 'amontejo')
+    password_entry.insert(0, 'MyCopernicusAccount25;')
+    opendap_link_entry.insert(0, 'https://nrt.cmems-du.eu/thredds/dodsC/cmems_mod_glo_phy-cur_anfc_0.083deg_P1D-m')
     # lon_min_entry.insert(0, '-87.21394123899096')
     # lon_max_entry.insert(0, '-86.14119796245421')
     # lat_min_entry.insert(0, '20.216928148926932')
@@ -243,14 +244,15 @@ class DataExtractorView(ScrollableView):
   def connect_success_callback(self, extractor: OpendapExtractor):
     print(self.extractor.dataset, file=sys.stderr)
     self.connect_button.configure(state='enabled')
-    tk.messagebox.showinfo(
-      title='Información de conexión',
-      message='La conexión se estableció exitosamente.')
+    # tk.messagebox.showinfo(
+    #   title='Información de conexión',
+    #   message='La conexión se estableció exitosamente.')
     # Display here the other fields.
     self.display_dimension_fields()
 
 
   def connect_failure_callback(self, err: BaseException):
+    traceback.print_exception(err, file=sys.stderr)
     self.connect_button.configure(state='enabled')
     tk.messagebox.showerror(
       title='Información de conexión',
@@ -272,8 +274,12 @@ class DataExtractorView(ScrollableView):
     self.dinamic_form_fields_frame.pack()
     parent_frame = self.dinamic_form_fields_frame
     # Display instructions
-    title_dims = ttk.Label(parent_frame, text='Establece los criterios del subconjunto', font=('TkDefaultFont', 14))
+    title_dims = ttk.Label(parent_frame, text='Delimita el subconjunto a descargar', font=('TkDefaultFont', 14))
     title_dims.pack(pady=10)
+    # Display dataset volume.
+    dataset_size_label = ttk.Label(parent_frame, text='Volúmen de datos:', font=('TkDefaultFont', 10))
+    dataset_size_label.pack(pady=10)
+    self.dataset_size_label = dataset_size_label
     # Display the dimension constraints form.
     dim_names = ext_wrangling.get_dims(self.extractor.dataset)
     self.dim_params = []
@@ -300,6 +306,8 @@ class DataExtractorView(ScrollableView):
           lat_max_entry = form_fields.create_entry_row(parent_frame, label_max, label_width=30, entry_width=35)
           # lat_min_entry.bind('<KeyRelease>', self.__coords_listenner)
           # lat_max_entry.bind('<KeyRelease>', self.__coords_listenner)
+          lat_min_entry.bind('<KeyRelease>', self.__input_change_listenner)
+          lat_max_entry.bind('<KeyRelease>', self.__input_change_listenner)
           lat_min_entry.insert(0, float(dim.min()))
           lat_max_entry.insert(0, float(dim.max()))
           self.dim_params.append(DimParam(
@@ -318,6 +326,8 @@ class DataExtractorView(ScrollableView):
           lon_max_entry = form_fields.create_entry_row(parent_frame, label_max, label_width=30, entry_width=35)
           # lon_min_entry.bind('<KeyRelease>', self.__coords_listenner)
           # lon_max_entry.bind('<KeyRelease>', self.__coords_listenner)
+          lon_min_entry.bind('<KeyRelease>', self.__input_change_listenner)
+          lon_max_entry.bind('<KeyRelease>', self.__input_change_listenner)
           lon_min_entry.insert(0, float(dim.min()))
           lon_max_entry.insert(0, float(dim.max()))
           self.dim_params.append(DimParam(
@@ -341,6 +351,8 @@ class DataExtractorView(ScrollableView):
             default_option=depths_data[0], label_width=30, entry_width=35)
           depth_max_entry = form_fields.create_combobox_row(parent_frame, label_max, depths_data, 
             default_option=depths_data[0], label_width=30, entry_width=35)
+          depth_min_entry.bind('<<ComboboxSelected>>', self.__input_change_listenner)
+          depth_max_entry.bind('<<ComboboxSelected>>', self.__input_change_listenner)
           self.dim_params.append(DimParam(
             dim_name=d,
             input_min=depth_min_entry,
@@ -356,11 +368,15 @@ class DataExtractorView(ScrollableView):
           label_min = f'{dname} min:'
           label_max = f'{dname} max:'
           start_date_entry = form_fields.create_date_entry_row(parent_frame, label_min, label_width=30)
-          start_date_entry.entry.delete(0, 'end')
-          start_date_entry.entry.insert(0, str(dim.min().values)[:10])
+          # start_date_entry.entry.delete(0, 'end')
+          # start_date_entry.entry.insert(0, str(dim.min().values)[:10])
           end_date_entry = form_fields.create_date_entry_row(parent_frame, label_max, label_width=30)
-          end_date_entry.entry.delete(0, 'end')
-          end_date_entry.entry.insert(0, str(dim.max().values)[:10])
+          # end_date_entry.entry.delete(0, 'end')
+          # end_date_entry.entry.insert(0, str(dim.max().values)[:10])
+          start_date_entry.entry.bind('<KeyRelease>', self.__input_change_listenner)
+          end_date_entry.entry.bind('<KeyRelease>', self.__input_change_listenner)
+          start_date_entry.entry.bind('<FocusIn>', self.__input_change_listenner)
+          end_date_entry.entry.bind('<FocusIn>', self.__input_change_listenner)
           self.dim_params.append(DimParam(
             dim_name=d,
             input_min=start_date_entry.entry,
@@ -415,6 +431,8 @@ class DataExtractorView(ScrollableView):
       )
       var_check.pack(fill='both', pady=(10, 0))
       self.var_params.append(VarParam(var_name=v, input=var_status))
+      # var_check.bind('<ButtonRelease-1>', self.__input_change_listenner)
+      var_status.trace_add('write', lambda *args: self.__input_change_listenner(args))
     
     # Input for dataset name
     label_ds_name = 'Nombre del archivo:'
@@ -428,11 +446,49 @@ class DataExtractorView(ScrollableView):
       command=lambda: self.__start_extraction()
     )
     self.extract_button.pack(pady=(20, 0))
+    self.__display_dataset_size()
   
+
+  def __display_dataset_size(self):
+    print('Trying to display dataset size', file=sys.stderr)
+    if not self.dataset_size_label:
+      return
+    dim_constraints, err_title, err_message = self.__get_dim_constraints()
+    if not dim_constraints:
+      print(f'{err_title}: {err_message}', file=sys.stderr)
+      self.dataset_size_label.configure(text=f'Se han seleccionado valores inválidos para las dimensiones.') #Volúmen de datos: No es posible determinar.
+      return
+    requested_vars = self.__get_requested_vars()
+    if len(requested_vars) == 0:
+      self.dataset_size_label.configure(text=f'No se ha seleccionado ninguna variable.')
+      return
+    print('Display dataset size. Dimensions:', dim_constraints, file=sys.stderr)
+    self.extractor.dim_constraints = dim_constraints
+    self.extractor.requested_vars = requested_vars
+    self.extractor.verbose = True
+    size = self.__get_adjusted_size()
+    self.dataset_size_label.configure(text=f'Volúmen de datos: {np.round(size.size, 3)} {size.unit.name}')
+
+
+  def __get_adjusted_size(self):
+    size_unit_list = [
+      SizeUnit.KILO_BYTE,
+      SizeUnit.MEGA_BYTE,
+      SizeUnit.GIGA_BYTE
+    ]
+    for size_unit in size_unit_list:
+      size = self.extractor.get_size(size_unit)
+      if size.size / 1024 <= 1 or SizeUnit.GIGA_BYTE == size_unit:
+        return size
+
 
   def __coords_listenner(self, event):
     print('Coordinates changed.', event, file=sys.stderr)
     self.__update_map()
+  
+
+  def __input_change_listenner(self, event):
+    self.__display_dataset_size()
 
   
   def __update_map_manually(self):
@@ -538,6 +594,7 @@ class DataExtractorView(ScrollableView):
 
 
   def __region_map_failure(self, err: BaseException):
+    traceback.print_exception(err)
     if self.draw_map_button:
       print('Enabling btn to draw the map')
       self.draw_map_button.configure(state='enabled')
@@ -569,83 +626,11 @@ class DataExtractorView(ScrollableView):
       print(f'{var_param.var_name}: {var_param.input.get()}', file=sys.stderr)
     
     # Dim validations and dim constraints construction
-    dim_constraints = {}
-    for dim_param in self.dim_params:
-      print(f'dim: {dim_param.dim_name}', file=sys.stderr)
-      dim_min_val = None
-      dim_max_val = None
-      try:
-        dim_min_val = dim_param.get_min_val()
-        print(f'min_val: {dim_min_val} ({type(dim_min_val)})', file=sys.stderr)
-      except ValueError as err:
-        tk.messagebox.showerror(
-          title='Validación de dimensiones',
-          message=f'El campo "{dim_param.dim_label} min" espera valores de tipo "{dim_param.expected_type_label}", pero obtuvo el valor "{dim_param.get_min_val(parse=False)}": {type(err)}({err})')
-        return
-      try:
-        dim_max_val = dim_param.get_max_val()
-        print(f'max_val: {dim_max_val} ({type(dim_max_val)})', file=sys.stderr)
-      except ValueError as err:
-        tk.messagebox.showerror(
-          title='Validación de dimensiones',
-          message=f'El campo "{dim_param.dim_label} max" espera valores de tipo "{dim_param.expected_type_label}", pero obtuvo el valor "{dim_param.get_min_val(parse=False)}": {type(err)}({err})')
-        return
-      if dim_min_val is None and dim_max_val is None:
-        continue
-      if dim_min_val is None or dim_max_val is None:
-        tk.messagebox.showerror(
-          title='Validación de dimensiones',
-          message=f'Para la dimensión {dim_param.dim_label} el valor mínimo y máximo deben estar dados o bien ambos deben omitirse.')
-        return
-      if dim_min_val > dim_max_val:
-        tk.messagebox.showerror(
-          title='Validación de dimensiones',
-          message=f'Para la dimensión {dim_param.dim_label} el valor mínimo no puede ser mayor que el valor máximo.')
-        return
-
-      dim = self.extractor.dataset.coords[dim_param.dim_name]
-      if 'axis' in dim.attrs:
-        dim_axis = dim.attrs['axis']
-        # This is latitude and longitude dimensions.
-        if dim_axis == 'Y' or dim_axis == 'X':
-          ds_dim_min = float(dim.min())
-          ds_dim_max = float(dim.max())
-          if dim_min_val < ds_dim_min:
-            tk.messagebox.showerror(
-              title='Validación de dimensiones',
-              message=f'Para la dimensión {dim_param.dim_label} se ingreso un valor mínimo inferior al del dataset de {ds_dim_min}.')
-            return
-          if dim_max_val > ds_dim_max:
-            tk.messagebox.showerror(
-              title='Validación de dimensiones',
-              message=f'Para la dimensión {dim_param.dim_label} se ingreso un valor máximo superior al del dataset de {ds_dim_max}.')
-            return
-        elif dim_axis == 'T':
-          # This is time dimension.
-          try:
-            datetime.strptime(dim_min_val, '%Y-%m-%d').date()
-            datetime.strptime(dim_max_val, '%Y-%m-%d').date()
-          except:
-            tk.messagebox.showerror(
-              title='Error', 
-              message='Las fechas deben tener un formato "YYYY-MM-DD" válido.')
-            return False
-          ds_dim_min = str(dim.min().values)[:10]
-          ds_dim_max = str(dim.max().values)[:10]
-          if dim_min_val < ds_dim_min:
-            tk.messagebox.showerror(
-              title='Validación de dimensiones',
-              message=f'Para la dimensión {dim_param.dim_label} se ingreso un valor mínimo inferior al del dataset de {ds_dim_min}.')
-            return
-          if dim_max_val > ds_dim_max:
-            tk.messagebox.showerror(
-              title='Validación de dimensiones',
-              message=f'Para la dimensión {dim_param.dim_label} se ingreso un valor máximo superior al del dataset de {ds_dim_max}.')
-            return
-
-      dim_constraints[dim_param.dim_name] = slice(dim_min_val, dim_max_val)
-
+    dim_constraints, err_title, err_message = self.__get_dim_constraints()
     print(f'Dimension constraints: {dim_constraints}', file=sys.stderr)
+    if not dim_constraints:
+      tk.messagebox.showerror(title=err_title, message=err_message)
+      return
 
     dataset_name = self.dataset_name_entry.get().strip()
     if dataset_name == '':
@@ -659,7 +644,7 @@ class DataExtractorView(ScrollableView):
       print(data, end='', file=sys.stderr)
     log_stream = LogStream(callback=show_log)
 
-    requested_vars = [var_param.var_name for var_param in self.var_params if var_param.input.get()]
+    requested_vars = self.__get_requested_vars()
     print('Requested var list:', requested_vars, file=sys.stderr)
 
     if len(requested_vars) == 0:
@@ -704,6 +689,7 @@ class DataExtractorView(ScrollableView):
 
 
   def __failure_extract_callback(self, err: BaseException):
+    traceback.print_exception(err)
     self.connect_button.configure(state='enabled')
     self.extract_button.configure(state='enabled')
     self.draw_map_button.configure(state='enabled')
@@ -713,17 +699,76 @@ class DataExtractorView(ScrollableView):
 
 
   # TODO: Finish validation
-  def __get_dim_constraints(self) -> tuple[dict[str, slice], bool]:
-    # Validate data.
-    # if data_source == '' or username == '' or password == '':
-    #   tk.messagebox.showerror(title='Error', message='Todos los campos son obligatorios.')
-    #   return False
-    # if data_source not in self.data_sources:
-    #   tk.messagebox.showerror(title='Error', message='Fuente de datos no válida.\n' 
-    #       'Por favor seleccione una de las fuentes de datos disponibles.')
-    #   return False
-    # if accept_terms == False:
-    #   tk.messagebox.showerror(title='Error', message='Debe aceptar los términos y condiciones.')
-    #   return False
+  def __get_dim_constraints(self) -> tuple[dict[str, slice], str, str]:
+    dim_constraints = {}
+    for dim_param in self.dim_params:
+      print(f'dim: {dim_param.dim_name}', file=sys.stderr)
+      dim_min_val = None
+      dim_max_val = None
+      try:
+        dim_min_val = dim_param.get_min_val()
+        print(f'min_val: {dim_min_val} ({type(dim_min_val)})', file=sys.stderr)
+      except ValueError as err:
+        title='Validación de dimensiones',
+        message=f'El campo "{dim_param.dim_label} min" espera valores de tipo "{dim_param.expected_type_label}", pero obtuvo el valor "{dim_param.get_min_val(parse=False)}": {type(err)}({err})'
+        return None, title, message
+      try:
+        dim_max_val = dim_param.get_max_val()
+        print(f'max_val: {dim_max_val} ({type(dim_max_val)})', file=sys.stderr)
+      except ValueError as err:
+        title='Validación de dimensiones',
+        message=f'El campo "{dim_param.dim_label} max" espera valores de tipo "{dim_param.expected_type_label}", pero obtuvo el valor "{dim_param.get_min_val(parse=False)}": {type(err)}({err})'
+        return None, title, message
+      if dim_min_val is None and dim_max_val is None:
+        continue
+      if dim_min_val is None or dim_max_val is None:
+        title='Validación de dimensiones',
+        message=f'Para la dimensión {dim_param.dim_label} el valor mínimo y máximo deben estar dados o bien ambos deben omitirse.'
+        return None, title, message
+      if dim_min_val > dim_max_val:
+        title='Validación de dimensiones',
+        message=f'Para la dimensión {dim_param.dim_label} el valor mínimo no puede ser mayor que el valor máximo.'
+        return None, title, message
 
-    return True
+      dim = self.extractor.dataset.coords[dim_param.dim_name]
+      if 'axis' in dim.attrs:
+        dim_axis = dim.attrs['axis']
+        # This is latitude and longitude dimensions.
+        if dim_axis == 'Y' or dim_axis == 'X':
+          ds_dim_min = float(dim.min())
+          ds_dim_max = float(dim.max())
+          if dim_min_val < ds_dim_min:
+            title='Validación de dimensiones',
+            message=f'Para la dimensión {dim_param.dim_label} se ingreso un valor mínimo inferior al del dataset de {ds_dim_min}.'
+            return None, title, message
+          if dim_max_val > ds_dim_max:
+            title='Validación de dimensiones',
+            message=f'Para la dimensión {dim_param.dim_label} se ingreso un valor máximo superior al del dataset de {ds_dim_max}.'
+            return None, title, message
+        elif dim_axis == 'T':
+          # This is time dimension.
+          try:
+            datetime.strptime(dim_min_val, '%Y-%m-%d').date()
+            datetime.strptime(dim_max_val, '%Y-%m-%d').date()
+          except:
+            title='Error', 
+            message='Las fechas deben tener un formato "YYYY-MM-DD" válido.'
+            return None, title, message
+          ds_dim_min = str(dim.min().values)[:10]
+          ds_dim_max = str(dim.max().values)[:10]
+          if dim_min_val < ds_dim_min:
+            title='Validación de dimensiones',
+            message=f'Para la dimensión {dim_param.dim_label} se ingreso un valor mínimo inferior al del dataset de {ds_dim_min}.'
+            return None, title, message
+          if dim_max_val > ds_dim_max:
+            title='Validación de dimensiones',
+            message=f'Para la dimensión {dim_param.dim_label} se ingreso un valor máximo superior al del dataset de {ds_dim_max}.'
+            return None, title, message
+
+      dim_constraints[dim_param.dim_name] = slice(dim_min_val, dim_max_val)
+
+    return dim_constraints, '', ''
+  
+
+  def __get_requested_vars(self):
+    return [var_param.var_name for var_param in self.var_params if var_param.input.get()]
