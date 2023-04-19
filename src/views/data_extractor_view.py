@@ -121,10 +121,10 @@ class DataExtractorView(ScrollableView):
     label = 'Enlace de OPeNDAP:'
     opendap_link_entry = form_fields.create_entry_row(form_frame, label, label_width=30, entry_width=35)
 
-    # TODO: Remove default values. This is only for testing purposes.
-    username_entry.insert(0, 'amontejo')
-    password_entry.insert(0, 'MyCopernicusAccount25;')
-    opendap_link_entry.insert(0, 'https://nrt.cmems-du.eu/thredds/dodsC/cmems_mod_glo_phy-cur_anfc_0.083deg_P1D-m')
+    # # TODO: Remove default values. This is only for testing purposes.
+    # username_entry.insert(0, '')
+    # password_entry.insert(0, '')
+    # opendap_link_entry.insert(0, 'https://nrt.cmems-du.eu/thredds/dodsC/cmems_mod_glo_phy-cur_anfc_0.083deg_P1D-m')
     # lon_min_entry.insert(0, '-87.21394123899096')
     # lon_max_entry.insert(0, '-86.14119796245421')
     # lat_min_entry.insert(0, '20.216928148926932')
