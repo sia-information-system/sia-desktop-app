@@ -211,8 +211,8 @@ class DataExtractorView(ScrollableView):
       self.dinamic_form_fields_frame = None
 
     # Validations.
-    if data_source == '' or username == '' or password == '' or opendap_link == '':
-      tk.messagebox.showerror(title='Error', message='Todos los campos son obligatorios.')
+    if data_source == '' or opendap_link == '':
+      tk.messagebox.showerror(title='Error', message='La fuente de datos y el enlace OPeNDAP son obligatorios.')
       return False
     if data_source not in self.data_sources:
       tk.messagebox.showerror(title='Error', message='Fuente de datos no válida.\n' 
@@ -368,11 +368,11 @@ class DataExtractorView(ScrollableView):
           label_min = f'{dname} min:'
           label_max = f'{dname} max:'
           start_date_entry = form_fields.create_date_entry_row(parent_frame, label_min, label_width=30)
-          # start_date_entry.entry.delete(0, 'end')
-          # start_date_entry.entry.insert(0, str(dim.min().values)[:10])
+          start_date_entry.entry.delete(0, 'end')
+          start_date_entry.entry.insert(0, str(dim.min().values)[:10])
           end_date_entry = form_fields.create_date_entry_row(parent_frame, label_max, label_width=30)
-          # end_date_entry.entry.delete(0, 'end')
-          # end_date_entry.entry.insert(0, str(dim.max().values)[:10])
+          end_date_entry.entry.delete(0, 'end')
+          end_date_entry.entry.insert(0, str(dim.max().values)[:10])
           start_date_entry.entry.bind('<KeyRelease>', self.__input_change_listenner)
           end_date_entry.entry.bind('<KeyRelease>', self.__input_change_listenner)
           start_date_entry.entry.bind('<FocusIn>', self.__input_change_listenner)
@@ -457,10 +457,12 @@ class DataExtractorView(ScrollableView):
     if not dim_constraints:
       print(f'{err_title}: {err_message}', file=sys.stderr)
       self.dataset_size_label.configure(text=f'Se han seleccionado valores inválidos para las dimensiones.') #Volúmen de datos: No es posible determinar.
+      # self.dataset_size_label.configure(text=err_message)
       return
     requested_vars = self.__get_requested_vars()
     if len(requested_vars) == 0:
       self.dataset_size_label.configure(text=f'No se ha seleccionado ninguna variable.')
+      # self.dataset_size_label.configure(text=err_message)
       return
     print('Display dataset size. Dimensions:', dim_constraints, file=sys.stderr)
     self.extractor.dim_constraints = dim_constraints
