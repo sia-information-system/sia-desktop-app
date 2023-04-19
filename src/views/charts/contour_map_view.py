@@ -474,9 +474,9 @@ class ContourMapView(TabView):
       min_dataset_lon, max_dataset_lon = min(self.dataset_lon_values), max(self.dataset_lon_values)
       min_dataset_lat, max_dataset_lat = min(self.dataset_lat_values), max(self.dataset_lat_values)
 
-      if lon_min < min_dataset_lon or lon_max > max_dataset_lon or \
-        lat_min < min_dataset_lat or lat_max > max_dataset_lat:
-        message = 'La longitud y latitud deben estar dentro del rango del dataset.\n'
+      if lon_max < min_dataset_lon or lon_min > max_dataset_lon or \
+        lat_max < min_dataset_lat or lat_min > max_dataset_lat:
+        message = 'La longitud o latitud estan fuera de los rangos del dataset.\n'
         message += f'Rango de longitud: {min_dataset_lon}° a {max_dataset_lon}°.\n'
         message += f'Rango de latitud: {min_dataset_lat}° a {max_dataset_lat}°.'
         raise Exception(message)
