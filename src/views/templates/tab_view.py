@@ -52,7 +52,7 @@ class TabView(ttk.Frame):
     self.__arrow_label.bind('<Button-1>', self.__toggle_column)
 
     # Column 2
-    self.__col2_params = ScrolledFrame(self, bootstyle='default', width=500)
+    self.__col2_params = ScrolledFrame(self, bootstyle='default', width=600)
     self.__col2_params.grid(row=0, column=1, sticky='nsew')
 
     params_notebook = ttk.Notebook(self.__col2_params, bootstyle='dark')

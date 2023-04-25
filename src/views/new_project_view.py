@@ -31,7 +31,7 @@ class NewProjectView(ttk.Frame):
 
     # Form.
     form_frame = ttk.Frame(self, bootstyle='default')
-    form_frame.pack(fill='x', padx=500, pady=20)
+    form_frame.pack(fill='x', padx=300, pady=20)
 
     form_entries_frame = ttk.Frame(form_frame)
     form_entries_frame.pack(fill='x')
