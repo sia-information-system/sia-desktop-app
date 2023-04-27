@@ -2,6 +2,7 @@ import pathlib
 import re
 import sys
 import tkinter as tk
+import traceback
 import ttkbootstrap as ttk
 import utils.dataset_utils as dataset_utils
 import utils.global_variables as global_vars
@@ -11,6 +12,7 @@ from views.templates.tab_view import TabView
 from siaplotlib.chart_building import level_chart
 from siaplotlib.chart_building.base_builder import ChartBuilder
 from siaplotlib.charts.raw_image import ChartImage
+from siaplotlib.processing import wrangling as plot_wrangling
 from datetime import datetime
 
 class HeatMapView(TabView):
@@ -245,20 +247,38 @@ class HeatMapView(TabView):
     lon_min, lon_max = float(lon_min), float(lon_max)
     lat_min, lat_max = float(lat_min), float(lat_max)
 
+    dim_constraints = { self.time_dim: [target_date] }
+    if depth != '':
+      dim_constraints[self.depth_dim] = [depth]
+    subset = plot_wrangling.slice_dice(
+      dataset=dataset,
+      dim_constraints=dim_constraints,
+      var=var_name
+    )
     dim_constraints = {
-      self.time_dim: [target_date],
       self.lon_dim: slice(lon_min, lon_max),
       self.lat_dim: slice(lat_min, lat_max)
     }
-    if depth != '':
-      dim_constraints[self.depth_dim] = [depth]
+    subset = plot_wrangling.slice_dice(
+      dataset=subset,
+      dim_constraints=dim_constraints,
+      squeeze=False
+    )
+    if len(subset[self.lat_dim]) < 2 or len(subset[self.lon_dim]) < 2:
+      message = 'La zona seleccionada, rango de latitud o longitud, es muy pequeña para generar el gráfico. '
+      message += 'Por favor, seleccione una zona más grande.'
+      raise Exception(message)
+      return
+    if dataset_utils.is_dataarray_empty(subset):
+      message = 'No hay datos para los parámetros seleccionados. '
+      message += 'Por favor, seleccione otros valores.'
+      raise Exception(message)
+      return
 
     self.chart_builder = level_chart.StaticHeatMapBuilder(
-      dataset=dataset,
-      var_name=var_name,
+      dataset=subset,
       title=chart_title.strip(),
       var_label=f'{variable} [{self.variables_units[var_name]}]',
-      dim_constraints=dim_constraints,
       lat_dim_name=self.lat_dim,
       lon_dim_name=self.lon_dim,
       color_palette=palette_colors
@@ -299,6 +319,7 @@ class HeatMapView(TabView):
 
     self.__stop_progress_bar()
     tk.messagebox.showerror(title='Error', message=err_msg)
+    traceback.print_exception(err)
 
   def __generate_animated_chart(
     self,
@@ -321,23 +342,41 @@ class HeatMapView(TabView):
     lon_min, lon_max = float(lon_min), float(lon_max)
     lat_min, lat_max = float(lat_min), float(lat_max)
 
+    dim_constraints = { self.time_dim: slice(start_date, end_date) }
+    if depth != '':
+      dim_constraints[self.depth_dim] = [depth]
+    subset = plot_wrangling.slice_dice(
+      dataset=dataset,
+      dim_constraints=dim_constraints,
+      var=var_name
+    )
     dim_constraints = {
-      self.time_dim: slice(start_date, end_date),
       self.lon_dim: slice(lon_min, lon_max),
       self.lat_dim: slice(lat_min, lat_max)
     }
-    if depth != '':
-      dim_constraints[self.depth_dim] = [depth]
+    subset = plot_wrangling.slice_dice(
+      dataset=subset,
+      dim_constraints=dim_constraints,
+      squeeze=False
+    )
+    if len(subset[self.lat_dim]) < 2 or len(subset[self.lon_dim]) < 2:
+      message = 'La zona seleccionada, rango de latitud o longitud, es muy pequeña para generar el gráfico. '
+      message += 'Por favor, seleccione una zona más grande.'
+      raise Exception(message)
+      return
+    if dataset_utils.is_dataarray_empty(subset):
+      message = 'No hay datos para los parámetros seleccionados. '
+      message += 'Por favor, seleccione otros valores.'
+      raise Exception(message)
+      return
 
     self.duration_unit = self.duration_unit_dict[duration_unit]
     self.duration = int(duration) if self.duration_unit == 'FRAMES_PER_SECOND' else round(float(duration), 2)
 
     self.chart_builder = level_chart.AnimatedHeatMapBuilder(
-      dataset=dataset,
-      var_name=var_name,
+      dataset=subset,
       title=chart_title.strip(),
       var_label=f'{variable} [{self.variables_units[var_name]}]',
-      dim_constraints=dim_constraints,
       time_dim_name=self.time_dim,
       lat_dim_name=self.lat_dim,
       lon_dim_name=self.lon_dim,
@@ -385,6 +424,7 @@ class HeatMapView(TabView):
 
     self.__stop_progress_bar()
     tk.messagebox.showerror(title='Error', message=err_msg)
+    traceback.print_exception(err)
 
   def __fields_validation(
     self, 

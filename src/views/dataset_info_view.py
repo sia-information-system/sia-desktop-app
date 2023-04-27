@@ -153,7 +153,7 @@ class DatasetInfoView(ScrollableView):
 
     if global_vars.northward_var != None and global_vars.northward_var != 'No definido' and \
       global_vars.eastward_var != None and global_vars.eastward_var != 'No definido':
-      single_vel_var_name = 'single_velocity'
+      single_vel_var_name = 'current_velocity'
       # Calculate unique velocity and load to project dataset
       plot_wrangling.calc_unique_velocity(
         dataset=global_vars.current_project_dataset,

@@ -139,3 +139,6 @@ def dataarray_info(da):
     dataarray_info_text += f'  {attr}: {da.attrs[attr]}\n'
 
   return dataarray_info_text
+
+def is_dataarray_empty(dataarray: xr.DataArray) -> bool:
+  return np.isnan(dataarray).all()

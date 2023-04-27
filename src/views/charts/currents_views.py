@@ -2,6 +2,7 @@ import pathlib
 import re
 import sys
 import tkinter as tk
+import traceback
 import ttkbootstrap as ttk
 import utils.dataset_utils as dataset_utils
 import utils.global_variables as global_vars
@@ -11,6 +12,7 @@ from datetime import datetime
 from views.templates.tab_view import TabView
 from siaplotlib.chart_building import line_chart
 from siaplotlib.chart_building.base_builder import ChartBuilder
+from siaplotlib.processing import wrangling as plot_wrangling
 from siaplotlib.charts.raw_image import ChartImage
 
 class CurrentsChartView(TabView):
@@ -156,12 +158,33 @@ class CurrentsChartView(TabView):
     dim_constraints = {
       self.time_dim: [target_date],
       self.depth_dim: depth,
+    }
+    subset = plot_wrangling.slice_dice(
+      dataset=dataset,
+      dim_constraints=dim_constraints
+    )
+    dim_constraints = {
       self.lon_dim: slice(lon_min, lon_max),
       self.lat_dim: slice(lat_min, lat_max),
     }
+    subset = plot_wrangling.slice_dice(
+      dataset=subset,
+      dim_constraints=dim_constraints,
+      squeeze=False
+    )
+    if len(subset[self.lat_dim]) < 4 or len(subset[self.lon_dim]) < 4:
+      message = 'La zona seleccionada, rango de latitud o longitud, es muy pequeña para generar el gráfico. '
+      message += 'Por favor, seleccione una zona más grande.'
+      raise Exception(message)
+      return
+    if 'current_velocity' in subset and dataset_utils.is_dataarray_empty(subset['current_velocity']):
+      message = 'No hay datos para los parámetros seleccionados. '
+      message += 'Por favor, seleccione otros valores.'
+      raise Exception(message)
+      return
 
     self.chart_builder = line_chart.StaticArrowChartBuilder(
-      dataset=dataset,
+      dataset=subset,
       eastward_var_name = self.eastward_var,
       northward_var_name = self.northward_var,
       lat_dim_name = self.lat_dim,
@@ -171,7 +194,6 @@ class CurrentsChartView(TabView):
       grouping_level = int(stride),
       title = chart_title,
       var_label='Velocidad [m/s]',
-      dim_constraints= dim_constraints,
     )
     self.chart_builder.build(
       success_callback=self.__static_success_build_callback, 
@@ -203,6 +225,7 @@ class CurrentsChartView(TabView):
 
     self.__stop_progress_bar()
     tk.messagebox.showerror(title='Error', message=err_msg)
+    traceback.print_exception(err)
 
   def __fields_validation(
     self, 
