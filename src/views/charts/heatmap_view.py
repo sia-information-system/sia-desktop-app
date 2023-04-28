@@ -514,10 +514,10 @@ class HeatMapView(TabView):
       if self.duration_unit_dict[duration_unit] == 'FRAMES_PER_SECOND':
         try:
           duration = int(duration)
-          if duration <= 0 or duration > 24:
+          if duration <= 0:
             raise Exception
         except:
-          message = 'La duración debe ser un número entero entre 1 y 24, '
+          message = 'La duración debe ser un número entero positivo, '
           message += f'cuando la unidad de duración es "{duration_unit}".'
           tk.messagebox.showerror(title='Error', message=message)
           return False

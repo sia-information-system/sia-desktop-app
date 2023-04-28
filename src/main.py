@@ -1,5 +1,6 @@
 import tkinter as tk
 import ttkbootstrap as ttk
+import pathlib
 import utils.general_utils as gen_utils
 import utils.project_manager as prj_mgmt
 from views.home_view import HomeView
@@ -8,6 +9,7 @@ from views.workspace_view import WorkspaceView
 from views.dataset_info_view import DatasetInfoView
 from views.data_extractor_view import DataExtractorView
 from views.user_manual_view import UserManualView
+from utils.global_constants import ASSETS_DIR
 
 class App:
   def __init__(self, window):
@@ -110,5 +112,6 @@ class App:
 if __name__ == '__main__':
   window = ttk.Window(themename='cosmo')
   window.wm_state('zoomed')
+  window.iconbitmap(pathlib.Path(ASSETS_DIR, 'images', 'sia-logo.ico'))
   app = App(window)
   window.mainloop()

@@ -4,6 +4,7 @@ from ttkbootstrap.scrolled import ScrolledFrame
 import pathlib
 from utils.global_constants import ASSETS_DIR, HOME_PROJECTS_DIR
 import utils.global_variables as global_vars
+import utils.general_utils as gen_utils
 from PIL import ImageTk, Image
 
 class TabView(ttk.Frame):
@@ -98,7 +99,7 @@ class TabView(ttk.Frame):
       example_chart_img_path = pathlib.Path(ASSETS_DIR, 'images', 'heatmap-example.png')
 
     img = Image.open(example_chart_img_path)
-    img_resized = self.__resize_chart_img(img)
+    img_resized = gen_utils.resize_chart_img(img)
     self.__chart_img = ImageTk.PhotoImage(img_resized)
     self.__chart_img_label = ttk.Label(self.chart_and_btns_frame, image=self.__chart_img)
     self.__chart_img_label.pack(pady=(10, 0))
@@ -143,7 +144,7 @@ class TabView(ttk.Frame):
 
   def show_static_chart_img(self, img_path_or_buffer):
     img = Image.open(img_path_or_buffer)
-    img_resized = self.__resize_chart_img(img)
+    img_resized = gen_utils.resize_chart_img(img)
     self.__chart_img = ImageTk.PhotoImage(img_resized)
     self.__chart_img_label.configure(image=self.__chart_img)
 
@@ -174,11 +175,6 @@ class TabView(ttk.Frame):
       self.__col2_params.grid(row=0, column=1, sticky='nsew')
       self.__arrow_label.configure(text='⬅')
 
-  def __resize_chart_img(self, img, max_height=600):
-    original_width, original_height = img.size
-    new_width = int(original_width * max_height / original_height)
-    return img.resize((new_width, max_height), Image.ANTIALIAS)
-
   def __get_gif_frames(self, gif_buffer):
     frames = []
     with Image.open(gif_buffer) as im:
@@ -190,7 +186,7 @@ class TabView(ttk.Frame):
         pass  # End of frames
 
     # Convert PIL Image objects to PhotoImage objects
-    return [ImageTk.PhotoImage( self.__resize_chart_img(frame) ) for frame in frames]
+    return [ImageTk.PhotoImage( gen_utils.resize_chart_img(frame) ) for frame in frames]
 
   def __start_gif(self):
     self.play_chart_btn['state'] = 'disabled'
@@ -216,7 +212,6 @@ class TabView(ttk.Frame):
     self.after(gif_frame_duration_ms, self.__play_gif)
 
   def __save_chart_in_selected_path(self):
-    # TODO: Revisar caso donde el usaurio carga el proyecto, se muestran la imagenes pero no se puede descargar porque no hay chart_builder cargado, ¿esta bien eso o leer de la imagen guardada en charts_imgs?
     # Avoid save examples charts.
     if not self.chart_builder:
       return
