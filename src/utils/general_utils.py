@@ -3,6 +3,7 @@ import pathlib
 import math
 import sys
 import ttkbootstrap as ttk
+from PIL import Image
 from configparser import ConfigParser
 import utils.global_variables as global_vars
 
@@ -93,3 +94,8 @@ def is_project_configured():
   return (global_vars.time_dim and global_vars.depth_dim and \
     global_vars.lon_dim and global_vars.lat_dim and \
     global_vars.northward_var and global_vars.eastward_var)
+
+def resize_chart_img(img, max_height=600):
+  original_width, original_height = img.size
+  new_width = int(original_width * max_height / original_height)
+  return img.resize((new_width, max_height), Image.ANTIALIAS)

@@ -2,6 +2,7 @@ import pathlib
 import re
 import sys
 import tkinter as tk
+import traceback
 import ttkbootstrap as ttk
 import utils.dataset_utils as dataset_utils
 import utils.global_variables as global_vars
@@ -11,6 +12,7 @@ from views.templates.tab_view import TabView
 from siaplotlib.chart_building import level_chart
 from siaplotlib.chart_building.base_builder import ChartBuilder
 from siaplotlib.charts.raw_image import ChartImage
+from siaplotlib.processing import wrangling as plot_wrangling
 from datetime import datetime
 
 class VerticalSliceView(TabView):
@@ -268,22 +270,49 @@ class VerticalSliceView(TabView):
     dim_constraints = {
       self.time_dim: target_date
     }
+    subset = plot_wrangling.slice_dice(
+      dataset=dataset,
+      dim_constraints=dim_constraints,
+      var=var_name
+    )
 
     if self.__axis_to_cut == 'latitude':
-      dim_constraints[self.lat_dim] = slice(min_axis_cut, max_axis_cut)
-      dim_constraints[self.lon_dim] = other_axis
+      dim_constraints = {
+        self.lat_dim: slice(min_axis_cut, max_axis_cut),
+        self.lon_dim: other_axis
+      }
+      subset = plot_wrangling.slice_dice(
+        dataset=subset,
+        dim_constraints=dim_constraints,
+        squeeze=False
+      )
+      if len(subset[self.lat_dim]) < 2:
+        message = 'El rango de corte seleccionado (latitud), es muy pequeño para generar el gráfico. '
+        message += 'Por favor, seleccione un rango de corte más grande.'
+        raise Exception(message)
+        return
       x_dim_name = self.lat_dim
       x_label = 'Latitude (°)'
     elif self.__axis_to_cut == 'longitude':
-      dim_constraints[self.lon_dim] = slice(min_axis_cut, max_axis_cut)
-      dim_constraints[self.lat_dim] = other_axis
+      dim_constraints = {
+        self.lon_dim: slice(min_axis_cut, max_axis_cut),
+        self.lat_dim: other_axis
+      }
+      subset = plot_wrangling.slice_dice(
+        dataset=subset,
+        dim_constraints=dim_constraints,
+        squeeze=False
+      )
+      if len(subset[self.lon_dim]) < 2:
+        message = 'El rango de corte seleccionado (longitud), es muy pequeño para generar el gráfico. '
+        message += 'Por favor, seleccione un rango de corte más grande.'
+        raise Exception(message)
+        return
       x_dim_name = self.lon_dim
       x_label = 'Longitude (°)'
 
-
     self.chart_builder = level_chart.StaticVerticalSliceBuilder(
-      dataset=dataset,
-      var_name=var_name,
+      dataset=subset,
       x_dim_name=x_dim_name,
       y_dim_name=self.depth_dim,
       lat_dim_name=self.lat_dim,
@@ -331,6 +360,7 @@ class VerticalSliceView(TabView):
 
     self.__stop_progress_bar()
     tk.messagebox.showerror(title='Error', message=err_msg)
+    traceback.print_exception(err)
 
   def __generate_animated_chart(
     self,
@@ -357,26 +387,52 @@ class VerticalSliceView(TabView):
     dim_constraints = {
       self.time_dim: slice(start_date, end_date),
     }
+    subset = plot_wrangling.slice_dice(
+      dataset=dataset,
+      dim_constraints=dim_constraints,
+      var=var_name
+    )
 
     if self.__axis_to_cut == 'latitude':
-      dim_constraints[self.lat_dim] = slice(min_axis_cut, max_axis_cut)
-      dim_constraints[self.lon_dim] = other_axis
+      dim_constraints = {
+        self.lat_dim: slice(min_axis_cut, max_axis_cut),
+        self.lon_dim: other_axis
+      }
+      subset = plot_wrangling.slice_dice(
+        dataset=subset,
+        dim_constraints=dim_constraints,
+        squeeze=False
+      )
+      if len(subset[self.lat_dim]) < 2:
+        message = 'El rango de corte seleccionado (latitud), es muy pequeño para generar el gráfico. '
+        message += 'Por favor, seleccione un rango de corte más grande.'
+        raise Exception(message)
+        return
       x_dim_name = self.lat_dim
       x_label = 'Latitude (°)'
     elif self.__axis_to_cut == 'longitude':
-      dim_constraints[self.lon_dim] = slice(min_axis_cut, max_axis_cut)
-      dim_constraints[self.lat_dim] = other_axis
+      dim_constraints = {
+        self.lon_dim: slice(min_axis_cut, max_axis_cut),
+        self.lat_dim: other_axis
+      }
+      subset = plot_wrangling.slice_dice(
+        dataset=subset,
+        dim_constraints=dim_constraints,
+        squeeze=False
+      )
+      if len(subset[self.lon_dim]) < 2:
+        message = 'El rango de corte seleccionado (longitud), es muy pequeño para generar el gráfico. '
+        message += 'Por favor, seleccione un rango de corte más grande.'
+        raise Exception(message)
+        return
       x_dim_name = self.lon_dim
       x_label = 'Longitude (°)'
-
-    print(f'dim_constraints: {dim_constraints}')
 
     self.duration_unit = self.duration_unit_dict[duration_unit]
     self.duration = int(duration) if self.duration_unit == 'FRAMES_PER_SECOND' else round(float(duration), 2)
 
     self.chart_builder = level_chart.AnimatedVerticalSliceBuilder(
-      dataset=dataset,
-      var_name=var_name,
+      dataset=subset,
       x_dim_name=x_dim_name,
       y_dim_name=self.depth_dim,
       time_dim_name=self.time_dim,
@@ -431,6 +487,7 @@ class VerticalSliceView(TabView):
 
     self.__stop_progress_bar()
     tk.messagebox.showerror(title='Error', message=err_msg)
+    traceback.print_exception(err)
 
   def __fields_validation(
     self, 
@@ -540,10 +597,10 @@ class VerticalSliceView(TabView):
       if self.duration_unit_dict[duration_unit] == 'FRAMES_PER_SECOND':
         try:
           duration = int(duration)
-          if duration <= 0 or duration > 24:
+          if duration <= 0:
             raise Exception
         except:
-          message = 'La duración debe ser un número entero entre 1 y 24, '
+          message = 'La duración debe ser un número entero positivo, '
           message += f'cuando la unidad de duración es "{duration_unit}".'
           tk.messagebox.showerror(title='Error', message=message)
           return False

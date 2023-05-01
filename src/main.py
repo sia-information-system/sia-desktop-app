@@ -1,5 +1,6 @@
 import tkinter as tk
 import ttkbootstrap as ttk
+import pathlib
 import utils.general_utils as gen_utils
 import utils.project_manager as prj_mgmt
 from views.home_view import HomeView
@@ -8,6 +9,8 @@ from views.workspace_view import WorkspaceView
 from views.dataset_info_view import DatasetInfoView
 from views.data_extractor_view import DataExtractorView
 from views.user_manual_view import UserManualView
+from views.about_app_view import AboutAppView
+from utils.global_constants import ASSETS_DIR
 
 class App:
   def __init__(self, window):
@@ -17,7 +20,7 @@ class App:
     self.window.title(self.title_app)
 
     # App placed in center of screen.
-    self.__place_and_center_app(1024, 768)
+    self.__center_window(self.window, 1024, 768)
 
     # Create home view.
     self.home_view = HomeView(self.window, self.title_app)
@@ -25,24 +28,38 @@ class App:
     self.new_project_view = NewProjectView(self.window)
     self.workspace_view = WorkspaceView(self.window)
     self.data_extractor_view = DataExtractorView(self.window)
-    self.user_manual_view = UserManualView(self.window)
 
     # Menu bar.
     self.__menu_bar = tk.Menu(self.window)
     self.__create_menu_bar()
 
-    # Popup where is show DatasetInfoView.
+    # Popups windows.
     self.data_info_popup_window = None
+    self.about_app_popup_window = None
+    self.user_manual_popup_window = None
 
     gen_utils.change_view(self.window, self.home_view)
 
-  def __place_and_center_app(self, app_width, app_height):
+  def __center_window(self, window, window_width, window_height):
     screen_width = self.window.winfo_screenwidth()
     screen_height = self.window.winfo_screenheight()
     # Top left corner (tlc) position.
-    tlc_x = int( (screen_width / 2) - (app_width / 2) )
-    tlc_y = int( (screen_height / 2) - (app_height / 2) )
-    self.window.geometry(f'{app_width}x{app_height}+{tlc_x}+{tlc_y}')
+    tlc_x = int( (screen_width / 2) - (window_width / 2) )
+    tlc_y = int( (screen_height / 2) - (window_height / 2) )
+
+    window.geometry(f'{window_width}x{window_height}+{tlc_x}+{tlc_y}')
+
+  def __center_window_with_percentajes(self, window, window_width_per=90, window_height_per=80):
+    # Get screen dimensions
+    screen_width = self.window.winfo_screenwidth()
+    screen_height = self.window.winfo_screenheight()
+    # Calculate desired size of the popup window
+    popup_width = int(screen_width * window_width_per / 100)  # % of screen width
+    popup_height = int(screen_height * window_height_per / 100)  # % of screen height
+    # Set the dimensions of the popup window
+    half_remaining_width = int(screen_width * (((100-window_width_per) / 100) / 2))
+    half_remaining_height = int(screen_height * (((100-window_height_per) / 100) / 2))
+    window.geometry(f'{popup_width}x{popup_height}+{half_remaining_width}+{half_remaining_height}')
 
   def __create_menu_bar(self):
     self.window.config(menu=self.__menu_bar)
@@ -70,7 +87,12 @@ class App:
 
     # Create 'Manual de usuario' menu option.
     user_manual_menu = tk.Menu(self.__menu_bar, tearoff=False)
-    self.__menu_bar.add_command(label='Manual de usuario', command=lambda: gen_utils.change_view(self.window, self.user_manual_view))
+    self.__menu_bar.add_command(label='Manual de usuario', command=self.__open_user_manual_view_popup)
+
+    # Create 'Acerca de' menu option.
+    about_menu = tk.Menu(self.__menu_bar, tearoff=False)
+    self.__menu_bar.add_command(label='Acerca de', command=self.__open_about_app_view_popup)
+
 
   def __on_close_app(self):
     if tk.messagebox.askokcancel('Salir', '¿Quieres salir de la aplicación?'):
@@ -81,22 +103,10 @@ class App:
     if self.data_info_popup_window is None:
       self.data_info_popup_window = tk.Toplevel()
       self.data_info_popup_window.title('Información del conjunto de datos')
-
-      # Get screen dimensions
-      screen_width = self.data_info_popup_window.winfo_screenwidth()
-      screen_height = self.data_info_popup_window.winfo_screenheight()
-      # Calculate desired size of the popup window
-      popup_width = int(screen_width * 0.9)  # 90% of screen width
-      popup_height = int(screen_height * 0.8)  # 80% of screen height
-      # Set the dimensions of the popup window
-      self.data_info_popup_window.geometry(f"{popup_width}x{popup_height}+{int(screen_width*0.05)}+{int(screen_height*0.1)}")
-
+      self.__center_window_with_percentajes(self.data_info_popup_window, 90, 80)
       dataset_info_view = DatasetInfoView(self.data_info_popup_window, self.window)
       dataset_info_view.load_view()
-
-      # When the popup window is closed, set the reference to None.
       self.data_info_popup_window.protocol('WM_DELETE_WINDOW', self.__close_dataset_info_view_popup)
-
     # If the popup window is already open, just show it, do not create a new one.
     else:
       self.data_info_popup_window.deiconify()
@@ -105,10 +115,45 @@ class App:
     self.data_info_popup_window.destroy()
     self.data_info_popup_window = None
 
+  def __open_user_manual_view_popup(self):
+    # If the popup window is not open, create it.
+    if self.user_manual_popup_window is None:
+      self.user_manual_popup_window = tk.Toplevel()
+      self.user_manual_popup_window.title('Manual de usuario')
+      self.__center_window_with_percentajes(self.user_manual_popup_window, 90, 80)
+      user_manual_view = UserManualView(self.user_manual_popup_window)
+      user_manual_view.load_view()
+      self.user_manual_popup_window.protocol('WM_DELETE_WINDOW', self.__close_user_manual_view_popup)
+    # If the popup window is already open, just show it, do not create a new one.
+    else:
+      self.user_manual_popup_window.deiconify()
+
+  def __close_user_manual_view_popup(self):
+    self.user_manual_popup_window.destroy()
+    self.user_manual_popup_window = None
+
+  def __open_about_app_view_popup(self):
+    # If the popup window is not open, create it.
+    if self.about_app_popup_window is None:
+      self.about_app_popup_window = tk.Toplevel()
+      self.about_app_popup_window.title('Acerca de')
+      self.__center_window(self.about_app_popup_window, 500, 350)
+      about_app_view = AboutAppView(self.about_app_popup_window)
+      about_app_view.load_view()
+      self.about_app_popup_window.protocol('WM_DELETE_WINDOW', self.__close_about_app_view_popup)
+    # If the popup window is already open, just show it, do not create a new one.
+    else:
+      self.about_app_popup_window.deiconify()
+
+  def __close_about_app_view_popup(self):
+    self.about_app_popup_window.destroy()
+    self.about_app_popup_window = None
+
 #  ------------------ Main ------------------
 
 if __name__ == '__main__':
   window = ttk.Window(themename='cosmo')
   window.wm_state('zoomed')
   app = App(window)
+  window.iconbitmap(pathlib.Path(ASSETS_DIR, 'images', 'sia-logo.ico'))
   window.mainloop()

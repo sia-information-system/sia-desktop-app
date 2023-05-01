@@ -2,6 +2,7 @@ import pathlib
 import re
 import sys
 import tkinter as tk
+import traceback
 import ttkbootstrap as ttk
 import utils.dataset_utils as dataset_utils
 import utils.general_utils as gen_utils
@@ -198,16 +199,37 @@ class WindRoseView(TabView):
     dim_constraints = {
       self.time_dim: [target_date],
       self.depth_dim: depth,
+    }
+    subset = plot_wrangling.slice_dice(
+      dataset=dataset,
+      dim_constraints=dim_constraints
+    )
+    dim_constraints = {
       self.lon_dim: slice(lon_min, lon_max),
       self.lat_dim: slice(lat_min, lat_max),
     }
+    subset = plot_wrangling.slice_dice(
+      dataset=subset,
+      dim_constraints=dim_constraints,
+      squeeze=False
+    )
+    if len(subset[self.lat_dim]) < 2 or len(subset[self.lon_dim]) < 2:
+      message = 'La zona seleccionada, rango de latitud o longitud, es muy pequeña para generar el gráfico. '
+      message += 'Por favor, seleccione una zona más grande.'
+      raise Exception(message)
+      return
+    if 'current_velocity' in subset and dataset_utils.is_dataarray_empty(subset['current_velocity']):
+      message = 'No hay datos para los parámetros seleccionados. '
+      message += 'Por favor, seleccione otros valores.'
+      raise Exception(message)
+      return
 
     bin_min = float(min_speed_legend) # 1 
     bin_max = float(max_speed_legend) # 2
     bin_jmp = float(speed_legend_step) # 0.2
 
     self.chart_builder = level_chart.StaticWindRoseBuilder(
-      dataset=dataset,
+      dataset=subset,
       eastward_var_name=self.eastward_var,
       northward_var_name=self.northward_var,
       lat_dim_name=self.lat_dim,
@@ -251,6 +273,7 @@ class WindRoseView(TabView):
 
     self.__stop_progress_bar()
     tk.messagebox.showerror(title='Error', message=err_msg)
+    traceback.print_exception(err)
 
   def __fields_validation(
     self, 
