@@ -5,3 +5,9 @@
 etc/config.ini
 
 tmp/
+
+# Build
+build/
+dist/
+*.spec
+*.exe

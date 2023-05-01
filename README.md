@@ -7,6 +7,7 @@
 * [xarray](https://pypi.org/project/xarray/). Command to install: `pip install xarray`
 * [netCDF4](https://pypi.org/project/netCDF4/). Command to install: `pip install netCDF4`
 * [numpy](https://pypi.org/project/numpy/). Command to install: `pip install numpy`
+* [pyinstaller]() 
 
 ## How to run app
 

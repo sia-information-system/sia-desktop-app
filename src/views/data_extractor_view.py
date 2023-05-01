@@ -6,6 +6,8 @@ import ttkbootstrap as ttk
 import traceback
 from tkinter import messagebox
 from ttkbootstrap.tooltip import ToolTip
+from ttkbootstrap.scrolled import ScrolledText
+from ttkbootstrap import constants as ttk_const
 from pathlib import Path
 from datetime import datetime
 from PIL import ImageTk, Image
@@ -65,8 +67,10 @@ class VarParam:
 
 
 class DataExtractorView(ScrollableView):
-  def __init__(self, master):
+  def __init__(self, master, root_app_window):
     super().__init__(master)
+    self.root_window = root_app_window # Main window. Used to change views.
+    self.__progress_bar = None
     self.data_sources = ['Copernicus', 'Otros - OPeNDAP']
     self.terms_status_var = tk.BooleanVar()
     self.map_img = None
@@ -82,10 +86,14 @@ class DataExtractorView(ScrollableView):
     self.lat_max_entry = None
     self.lon_min_entry = None
     self.lon_max_entry = None
+    self.column_2_frame: ttk.Frame = None
     self.map_frame: ttk.Frame = None
     self.map_wrapper_frame: ttk.Frame = None
     self.draw_map_button: ttk.Button = None
     self.dataset_size_label: ttk.Label = None
+    self.logging_console_frame: ttk.Frame = None
+    self.logging_console = None
+    self.log_stream = LogStream(self.__extraction_log_handler)
 
 
   def load_view(self):
@@ -94,6 +102,16 @@ class DataExtractorView(ScrollableView):
 
     title_view_label = ttk.Label(self.scroll_frame, text='Descarga de datos', font=('TkDefaultFont', 14))
     title_view_label.pack(pady=10)
+
+    self.__progress_bar = ttk.Progressbar(
+      self.scroll_frame,
+      maximum=40,
+      mode='determinate',
+      length=100,
+      value=0,
+      bootstyle='success striped'
+    )
+    self.__progress_bar.pack(pady=10)
 
     columns_frame = ttk.Frame(self.scroll_frame)
     columns_frame.pack()
@@ -167,9 +185,23 @@ class DataExtractorView(ScrollableView):
 
     # Column 2
 
-    map_frame = ttk.Frame(columns_frame)
-    map_frame.grid(row=0, column=1, padx=20, pady=10, sticky='nsew')
+    column_2_frame = ttk.Frame(columns_frame)
+    column_2_frame.grid(row=0, column=1, padx=20, pady=10, sticky='nsew')
+    self.column_2_frame = column_2_frame
+
+    map_frame = ttk.Frame(self.column_2_frame)
+    map_frame.pack()
     self.map_frame = map_frame
+
+    self.logging_console_frame = ttk.Frame(self.column_2_frame)
+    self.logging_console_frame.pack()
+
+    logging_console_title = ttk.Label(self.logging_console_frame, text='Mensajes del extractor', font=('TkDefaultFont', 14))
+    logging_console_title.pack(pady=10)
+
+    logging_console = ScrolledText(self.logging_console_frame, padding=5, height=25, autohide=True)
+    logging_console.pack(fill=ttk_const.X, expand=ttk_const.YES)
+    self.logging_console = logging_console
 
     # self.map_wrapper_frame = ttk.Frame(map_frame)
     # self.map_wrapper_frame.pack()
@@ -187,6 +219,19 @@ class DataExtractorView(ScrollableView):
     # self.map_img = ImageTk.PhotoImage(img_resized)
     # map_img_label = ttk.Label(map_wrapper_frame, image=self.map_img)
     # map_img_label.pack(pady=(10, 0))
+
+
+  def __start_progress_bar(self):
+    self.__progress_bar.start()
+
+
+  def __stop_progress_bar(self):
+    self.__progress_bar.stop()
+  
+
+  def __extraction_log_handler(self, message):
+    print(message, end='', file=sys.stderr)
+    self.logging_console.insert(ttk_const.END, message)
   
 
   def __connect_data_source(
@@ -235,14 +280,17 @@ class DataExtractorView(ScrollableView):
         opendap_url=opendap_link,
         auth=SimpleAuth(user=username, passwd=password),
         verbose=True)
+    self.extractor.log_stream = self.log_stream
     # Display a message informing of this process.
     self.extractor.connect(
       success_callback=self.connect_success_callback,
       failure_callback=self.connect_failure_callback)
+    self.__start_progress_bar()
   
 
   def connect_success_callback(self, extractor: OpendapExtractor):
-    print(self.extractor.dataset, file=sys.stderr)
+    print(self.extractor.dataset, file=self.log_stream)
+    self.__stop_progress_bar()
     self.connect_button.configure(state='enabled')
     # tk.messagebox.showinfo(
     #   title='Información de conexión',
@@ -252,7 +300,8 @@ class DataExtractorView(ScrollableView):
 
 
   def connect_failure_callback(self, err: BaseException):
-    traceback.print_exception(err, file=sys.stderr)
+    traceback.print_exception(err, file=self.log_stream)
+    self.__stop_progress_bar()
     self.connect_button.configure(state='enabled')
     tk.messagebox.showerror(
       title='Información de conexión',
@@ -455,7 +504,7 @@ class DataExtractorView(ScrollableView):
       return
     dim_constraints, err_title, err_message = self.__get_dim_constraints()
     if not dim_constraints:
-      print(f'{err_title}: {err_message}', file=sys.stderr)
+      print(f'{err_title}: {err_message}', file=self.log_stream)
       self.dataset_size_label.configure(text=f'Se han seleccionado valores inválidos para las dimensiones.') #Volúmen de datos: No es posible determinar.
       # self.dataset_size_label.configure(text=err_message)
       return
@@ -596,7 +645,7 @@ class DataExtractorView(ScrollableView):
 
 
   def __region_map_failure(self, err: BaseException):
-    traceback.print_exception(err)
+    traceback.print_exception(err, file=self.log_stream)
     if self.draw_map_button:
       print('Enabling btn to draw the map')
       self.draw_map_button.configure(state='enabled')
@@ -609,6 +658,7 @@ class DataExtractorView(ScrollableView):
     try:
       self.__setup_extraction()
     except BaseException as err:
+      traceback.print_exception(err, file=self.log_stream)
       tk.messagebox.showerror(
         title='Información de descarga',
         message=f'Ocurrió un error al iniciar el proceso de descarga: {type(err)}({err})')
@@ -629,7 +679,7 @@ class DataExtractorView(ScrollableView):
     
     # Dim validations and dim constraints construction
     dim_constraints, err_title, err_message = self.__get_dim_constraints()
-    print(f'Dimension constraints: {dim_constraints}', file=sys.stderr)
+    print(f'Dimension constraints: {dim_constraints}', file=self.log_stream)
     if not dim_constraints:
       tk.messagebox.showerror(title=err_title, message=err_message)
       return
@@ -642,12 +692,12 @@ class DataExtractorView(ScrollableView):
       return
 
     # Extraccion de datos.
-    def show_log(data):
-      print(data, end='', file=sys.stderr)
-    log_stream = LogStream(callback=show_log)
+    # def show_log(data):
+    #   print(data, end='', file=sys.stderr)
+    # log_stream = LogStream(callback=show_log)
 
     requested_vars = self.__get_requested_vars()
-    print('Requested var list:', requested_vars, file=sys.stderr)
+    print('Requested var list:', requested_vars, file=self.log_stream)
 
     if len(requested_vars) == 0:
       tk.messagebox.showerror(
@@ -657,11 +707,11 @@ class DataExtractorView(ScrollableView):
 
     self.extractor.dim_constraints = dim_constraints
     self.extractor.requested_vars = requested_vars
-    self.extractor.log_stream = log_stream
+    # self.extractor.log_stream = self.log_stream
     self.extractor.verbose = True
 
     curr_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    print(f'Starting extraction at: {curr_datetime}', file=sys.stderr)
+    print(f'Starting extraction at: {curr_datetime}', file=self.log_stream)
     timestamp = "".join(str(datetime.now().timestamp()).split('.'))
     filename = f'{dataset_name}_{timestamp}.nc'
     fpath = Path(HOME_DATASETS_DIR, filename)
@@ -672,6 +722,7 @@ class DataExtractorView(ScrollableView):
     self.extract_button.configure(state='disabled')
     self.connect_button.configure(state='disabled')
     self.draw_map_button.configure(state='disabled')
+    self.__start_progress_bar()
 
     size_result = self.extractor.get_size(SizeUnit.MEGA_BYTE)
     tk.messagebox.showinfo(
@@ -683,7 +734,8 @@ class DataExtractorView(ScrollableView):
     self.extract_button.configure(state='enabled')
     self.connect_button.configure(state='enabled')
     self.draw_map_button.configure(state='enabled')
-    print('Extraction details:', extract_details, file=sys.stderr)
+    self.__stop_progress_bar()
+    print('Extraction details:', extract_details, file=self.log_stream)
     fpath = Path(extract_details.file.path)
     tk.messagebox.showinfo(
       title='Información de descarga',
@@ -691,10 +743,11 @@ class DataExtractorView(ScrollableView):
 
 
   def __failure_extract_callback(self, err: BaseException):
-    traceback.print_exception(err)
+    traceback.print_exception(err, file=self.log_stream)
     self.connect_button.configure(state='enabled')
     self.extract_button.configure(state='enabled')
     self.draw_map_button.configure(state='enabled')
+    self.__stop_progress_bar()
     tk.messagebox.showerror(
       title='Información de descarga',
       message=f'Ocurrió un error durante la descarga: {type(err)}({err})')
