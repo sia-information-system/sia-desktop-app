@@ -8,7 +8,7 @@ from views.new_project_view import NewProjectView
 from views.workspace_view import WorkspaceView
 from views.dataset_info_view import DatasetInfoView
 from views.data_extractor_view import DataExtractorView
-from views.user_manual_view import UserManualView
+from views.user_manual_view import UserManualView, LinksToDocsView
 from views.about_app_view import AboutAppView
 from utils.global_constants import ASSETS_DIR
 
@@ -89,7 +89,7 @@ class App:
 
     # Create 'Manual de usuario' menu option.
     user_manual_menu = tk.Menu(self.__menu_bar, tearoff=False)
-    self.__menu_bar.add_command(label='Manual de usuario', command=self.__open_user_manual_view_popup)
+    self.__menu_bar.add_command(label='Documentación', command=self.__open_user_manual_view_popup)
 
     # Create 'Acerca de' menu option.
     about_menu = tk.Menu(self.__menu_bar, tearoff=False)
@@ -138,9 +138,11 @@ class App:
     # If the popup window is not open, create it.
     if self.user_manual_popup_window is None:
       self.user_manual_popup_window = tk.Toplevel()
-      self.user_manual_popup_window.title('Manual de usuario')
-      self.__center_window_with_percentajes(self.user_manual_popup_window, 90, 80)
-      user_manual_view = UserManualView(self.user_manual_popup_window)
+      self.user_manual_popup_window.title('Documentación y manual de usuario')
+      # self.__center_window_with_percentajes(self.user_manual_popup_window, 90, 80)
+      self.__center_window(self.user_manual_popup_window, 500, 350)
+      # user_manual_view = UserManualView(self.user_manual_popup_window)
+      user_manual_view = LinksToDocsView(self.user_manual_popup_window)
       user_manual_view.load_view()
       self.user_manual_popup_window.protocol('WM_DELETE_WINDOW', self.__close_user_manual_view_popup)
     # If the popup window is already open, just show it, do not create a new one.

@@ -7,7 +7,14 @@
 * [xarray](https://pypi.org/project/xarray/). Command to install: `pip install xarray`
 * [netCDF4](https://pypi.org/project/netCDF4/). Command to install: `pip install netCDF4`
 * [numpy](https://pypi.org/project/numpy/). Command to install: `pip install numpy`
-* [pyinstaller]() 
+* [pyinstaller](https://pyinstaller.org/en/stable/index.html). Command to install: `pip install pyinstaller`
+
+## Build process.
+
+Pyinstaller is used to generate a bundle. Then, to generate the installer InnoSetup is required.
+
+* [InnoSetup](https://jrsoftware.org/isdl.php)
+* [Guide to build the app and generate the installer](https://www.youtube.com/watch?v=p3tSLatmGvU)
 
 ## How to run app
 

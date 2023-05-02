@@ -103,6 +103,9 @@ class DataExtractorView(ScrollableView):
     title_view_label = ttk.Label(self.scroll_frame, text='Descarga de datos', font=('TkDefaultFont', 14))
     title_view_label.pack(pady=10)
 
+    title_view_label = ttk.Label(self.scroll_frame, text='ADVERTENCIA: Mantenga abierta esta ventana mientras se ejecuta su descarga.', font=('TkDefaultFont', 10, 'bold'))
+    title_view_label.pack(pady=10)
+
     self.__progress_bar = ttk.Progressbar(
       self.scroll_frame,
       maximum=40,
