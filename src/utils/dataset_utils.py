@@ -98,26 +98,42 @@ def get_dataset_info():
   #   temp_file.seek(0)
   #   dataset_info_text = temp_file.read()
 
-  dataset_info_text = 'DATOS GENERALES\n\n'
+  dataset_info_text = '<DATOS GENERALES>\n\n'
   ds_dict = dataset.attrs
   for key in ds_dict:
     dataset_info_text += f'{key}: {ds_dict[key]}\n'
 
-  dataset_info_text += '\nDIMENSIONES\n\n'
+  dataset_info_text += '\n<DIMENSIONES>\n\n'
 
-  dataset_info_text += 'Dimensión - Cantidad de valores\n'
-  for key in dataset.dims:
-    dataset_info_text += f'{key} - {dataset.dims[key]}\n'
+  dataset_info_text += '<Dimensiones e información sobre sus valores>\n'
+  
+  dims_set = set(list(dataset.dims))
+  coords_set = set(list(dataset.coords))
+
+  for key in coords_set:
+    # dataset_info_text += f'{key} - {dataset.dims[key]}\n'
+    dim_indicator = ':'
+    if key in dims_set:
+      dim_indicator = ' (Dimensión):'
+    dataset_info_text += f'-> {key}{dim_indicator}\n'
+    dataset_info_text += f'\tCantidad de valores: {len(dataset.coords[key].data)}\n'
+    dataset_info_text += f'\tValor mínimo verdadero: {dataset.coords[key].min().data}\n'
+    dataset_info_text += f'\tValor máximo verdadero: {dataset.coords[key].max().data}\n'
   dataset_info_text += '\n'
-    
-  for coord in dataset.coords:
-    dataset_info_text += f'Dimensión: {coord}\n'
+  
+  dataset_info_text += '<Dimensiones y sus atributos>\n'
+  for coord in coords_set:
+    dim_indicator = ':'
+    if coord in dims_set:
+      dim_indicator = ' (Dimensión):'
+
+    dataset_info_text += f'-> {coord}{dim_indicator}\n'
     coord_meta = dataset.coords[coord].attrs
     
     for key in coord_meta:
       dataset_info_text += f'\t{key}: {coord_meta[key]}\n'
 
-  dataset_info_text += '\nVARIABLES\n\n'
+  dataset_info_text += '\n<VARIABLES>\n\n'
 
   ds_coords = dataset.coords
   for varname, variable in dataset.variables.items():
@@ -131,10 +147,28 @@ def get_dataset_info():
   return dataset_info_text
 
 def dataarray_info(da):
-  dataarray_info_text = 'Dimensions:\n'
-  dataarray_info_text += f'{da.dims}\n\n'
-  dataarray_info_text += f'{da.coords}\n\n' # Includes "Coordinates:"
-  dataarray_info_text += 'Variable attributes:\n'
+  dataarray_info_text = 'Dimensiones:\n'
+  dims_list = [d for d in da.dims]
+  coords_list = [c for c in da.coords]
+  for d in dims_list:
+    dataarray_info_text += f'{d} (Dimensión):\n'
+    dataarray_info_text += f'\tCantidad de datos: {len(da.coords[d].data)}\n'
+    dataarray_info_text += f'\tValor mínimo verdadero: {da.coords[d].min().data}\n'
+    dataarray_info_text += f'\tValor máximo verdadero: {da.coords[d].max().data}\n'
+    dataarray_info_text += '\tAtributos:\n'
+    for attr in da.coords[d].attrs:
+      dataarray_info_text += f'\t\t{attr}: {da.coords[d].attrs[attr]}\n'
+  for c in list(set(coords_list) - set(dims_list)):
+    dataarray_info_text += f'{c}:\n'
+    dataarray_info_text += f'\tValor mínimo verdadero: {da.coords[c].min().data}\n'
+    dataarray_info_text += f'\tValor máximo verdadero: {da.coords[c].max().data}\n'
+    dataarray_info_text += '\tAtributos:\n'
+    for attr in da.coords[c].attrs:
+      dataarray_info_text += f'\t\t{attr}: {da.coords[c].attrs[attr]}\n'
+  dataarray_info_text += '\n'
+  # dataarray_info_text += f'{da.dims}\n\n'
+  # dataarray_info_text += f'{da.coords}\n\n' # Includes "Coordinates:"
+  dataarray_info_text += 'Atributos de la variable:\n'
   for attr in da.attrs:
     dataarray_info_text += f'  {attr}: {da.attrs[attr]}\n'
 

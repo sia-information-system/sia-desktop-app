@@ -434,8 +434,17 @@ class DataExtractorView(ScrollableView):
             dim_label=dname,
             expected_type_label='Texto con formato YYYY-MM-DD'))
         else:
-          use_default_display = True
+          # Follow the netcdf standard for dimensions and search for a "axis" attribute.
+          # If not presente in a coordinate, skip it.
+          # use_default_display = True
+          pass
+      else:
+        # Follow the netcdf standard for dimensions and search for a "axis" attribute.
+        # If not presente in a coordinate, skip it.
+        # use_default_display = True
+        pass
       if use_default_display:
+        # NOTE: This is not being used in favor to follow the netcdf standard.
         # None of the above matched even though they may were tested.
         print('Not a known axis. Displaying with default method.', file=sys.stderr)
         dim_min_entry = form_fields.create_entry_row(parent_frame, label_min, label_width=30, entry_width=35)

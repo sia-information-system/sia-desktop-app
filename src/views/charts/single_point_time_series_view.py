@@ -12,6 +12,7 @@ from siaplotlib.chart_building import line_chart
 from siaplotlib.chart_building.base_builder import ChartBuilder
 from siaplotlib.charts.raw_image import ChartImage
 from datetime import datetime
+import traceback
 
 class SinglePointTimeSeriesView(TabView):
   def __init__(self, master, project_path, worksheet_name):
@@ -204,7 +205,8 @@ class SinglePointTimeSeriesView(TabView):
 
   def __static_failure_build_callback(self, err):
     print('--- An error ocurr while building the chart. ---', file=sys.stderr)
-    print(err, file=sys.stderr)
+    traceback.print_exception(err, file=sys.stderr)
+    # print(err, file=sys.stderr)
 
     err_msg = 'Ocurrió un error al generar el gráfico.\n'
     if 'is not a valid dimension or coordinate' in str(err):
