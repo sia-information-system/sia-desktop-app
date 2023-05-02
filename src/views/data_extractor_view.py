@@ -202,7 +202,7 @@ class DataExtractorView(ScrollableView):
     logging_console_title = ttk.Label(self.logging_console_frame, text='Mensajes del extractor', font=('TkDefaultFont', 14))
     logging_console_title.pack(pady=10)
 
-    logging_console = ScrolledText(self.logging_console_frame, padding=5, height=25, autohide=True)
+    logging_console = ScrolledText(self.logging_console_frame, padding=5, height=25, autohide=True, wrap='word')
     logging_console.pack(fill=ttk_const.X, expand=ttk_const.YES)
     self.logging_console = logging_console
 
