@@ -266,7 +266,8 @@ class WindRoseView(TabView):
 
   def __static_failure_build_callback(self, err):
     print('--- An error ocurr while building the chart. ---', file=sys.stderr)
-    print(err, file=sys.stderr)
+    traceback.print_exception(err, file=sys.stderr)
+    # print(err, file=sys.stderr)
 
     err_msg = 'Ocurrió un error al generar el gráfico.\n'
     err_msg += 'Revisa nuevamente los parámetros de creación del gráfico.'

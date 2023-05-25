@@ -1,5 +1,5 @@
 import os
-import pathlib
+from pathlib import Path
 import math
 import sys
 import ttkbootstrap as ttk
@@ -7,11 +7,32 @@ from PIL import Image
 from configparser import ConfigParser
 import utils.global_variables as global_vars
 
+
+def get_app_root_dir():
+  p = Path(Path(__file__).parent.absolute(), '..', '..')
+  if hasattr(sys, "_MEIPASS"):
+    p = Path(sys._MEIPASS)
+    print('Using sys._MEIPASS as root dir', p, file=sys.stderr)
+  # print('Root path:', p, file=sys.stderr)
+  return p
+
+# def get_app_root_dir():
+#   p = Path(Path(__file__).parent.absolute(), '..', '..')
+#   if getattr(sys, 'frozen', False): # Running as compiled
+#     p = Path('.')
+#     print('Running as compiled.', p, file=sys.stderr)
+#   print('Root path:', p, file=sys.stderr)
+#   # p.
+#   return p
+
+
+def resource_path(relative_path):
+  return Path(get_app_root_dir(), relative_path)
+
+
 def read_config():
-  config_path = pathlib.Path(
-    pathlib.Path(__file__).parent.absolute(),
-    '..',
-    '..',
+  config_path = Path(
+    get_app_root_dir(),
     'etc',
     'config.ini')
   config = ConfigParser()
@@ -25,10 +46,10 @@ def get_directory_from_config(config_var, start_from='root'):
   path_segments = []
   # Initial segments 
   if start_from == 'root':
-    path_segments.extend([pathlib.Path(__file__).parent.absolute(), '..', '..'])
+    path_segments.extend([get_app_root_dir()])
   elif start_from == 'user_home':
     home_dirname='SIA'
-    path_segments.extend([pathlib.Path.home(), home_dirname])
+    path_segments.extend([Path.home(), home_dirname])
 
   try:
     config = read_config()
@@ -38,12 +59,13 @@ def get_directory_from_config(config_var, start_from='root'):
       raise Exception()
     for directory in user_path_segments:
       path_segments.append(directory)
-    directory_path = pathlib.Path(*path_segments)
+    directory_path = Path(*path_segments)
     mkdir_r(directory_path)
     return directory_path
-  except:
+  except Exception as err:
     print('Something went wrong while trying to get the directory from config.', file=sys.stderr)
     print(f'The config.ini there not exists or the variable {config_var} is not defined.', file=sys.stderr)
+    print(err)
     sys.exit(1)
 
 def find_view(root_window, view_class):

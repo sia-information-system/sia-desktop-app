@@ -13,7 +13,7 @@ class HomeView(ttk.Frame):
   def load_view(self):
     self.pack(fill='both', expand=1)
 
-    name_app_label = ttk.Label(self, text=self.title_app, font=('Helvetica', 18))
+    name_app_label = ttk.Label(self, text=self.title_app, font=('Helvetica', 24, 'bold'))
     name_app_label.pack(pady=30)
 
     image_path = pathlib.Path(ASSETS_DIR, 'images', 'sia-logo.png')
