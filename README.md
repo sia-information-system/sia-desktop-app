@@ -1,6 +1,6 @@
 # Sistema de Información Ambiental (SIA)
 
-**Version:** 1.0.0
+**Version:** 1.1.0
 
 GUI Application to facilitate the download, exploration and visual analysis of oceanographic data.
 

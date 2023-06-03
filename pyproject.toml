@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sia-app"
-version = "1.0.0"
+version = "1.1.0"
 description = "Application to facilitate the download, exploration and visual analysis of oceanographic data."
 readme = "README.md"
 authors = [{ name = "Alexis Montejo, Julian Maldonado et al." }]
@@ -49,7 +49,7 @@ sia-app-debug = "sia_app.__main__:main"
 sia-app = "sia_app.__main__:main"
 
 [tool.bumpver]
-current_version = "1.0.0"
+current_version = "1.1.0"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "Bump version {old_version} -> {new_version}"
 commit = true
