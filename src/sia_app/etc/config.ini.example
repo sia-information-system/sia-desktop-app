@@ -1,0 +1,3 @@
+[DEFAULT]
+HOME_DATASETS_DIR = /datasets
+HOME_PROJECTS_DIR = /projects

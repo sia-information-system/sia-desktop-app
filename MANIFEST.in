@@ -1,0 +1,3 @@
+include src/sia_app/etc/*
+include src/sia_app/assets/images/*
+include src/sia_app/assets/others/*
